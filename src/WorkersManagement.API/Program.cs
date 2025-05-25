@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Options;
+using System.Text.Json.Serialization;
+using WorkersManagement.Core;
 using WorkersManagement.Infrastructure;
 namespace WorkersManagement.API
 {
@@ -9,7 +12,12 @@ namespace WorkersManagement.API
 
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+             .AddJsonOptions(options =>
+             {
+                 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+             });
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -17,6 +25,7 @@ namespace WorkersManagement.API
             //add infrastructure and other services
             builder.Services.AddInfrastructure(builder.Configuration);
             builder.Services.AddCors();
+            builder.Services.AddCore(builder.Configuration);
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

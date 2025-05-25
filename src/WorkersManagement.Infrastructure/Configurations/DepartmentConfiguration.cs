@@ -18,7 +18,7 @@ namespace WorkersManagement.Infrastructure.Configurations
             builder.Property(d => d.Description)
                 .HasMaxLength(500);
 
-            builder.HasOne(d => d.Team)
+            builder.HasOne(d => d.Teams)
                 .WithMany(t => t.Departments)
                 .HasForeignKey(d => d.TeamId)
                 .OnDelete(DeleteBehavior.Cascade);

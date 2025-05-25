@@ -1,4 +1,5 @@
-﻿using WorkersManagement.Infrastructure;
+﻿using WorkersManagement.Domain.Dtos;
+using WorkersManagement.Infrastructure;
 
 namespace WorkersManagement.Domain.Interfaces
 {
@@ -6,7 +7,10 @@ namespace WorkersManagement.Domain.Interfaces
     {
         Task<Team> CreateTeamAsync(Team team);
         Task<List<Team>> GetAllTeamsAsync();
-        Task<Team> GetTeamByIdAsync(Guid teamId);
+        Task<Team> GetTeamByNameAsync(string teamName);
+
+        Task<bool> UpdateTeamAsync(UpdateTeamDto team);
+        Task<bool> DeleteTeamAsync(Guid teamId);
     }
 
 }

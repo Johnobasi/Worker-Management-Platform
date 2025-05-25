@@ -1,9 +1,8 @@
 ﻿namespace WorkersManagement.Domain.Dtos
 {
-    public class CreateDepartmenDto
+    public class DepartmentDto
     {
         public string Name { get; set; }
-        public string Description { get; set; }
         public string TeamName { get; set; }
     }
 }

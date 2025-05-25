@@ -1,11 +1,16 @@
-﻿using WorkersManagement.Infrastructure.Entities;
+﻿using WorkersManagement.Domain.Dtos;
+using WorkersManagement.Infrastructure.Entities;
 
 namespace WorkersManagement.Domain.Interfaces
 {
     public interface IDepartmentRepository
     {
-        Task<Department> CreateDepartmentAsync(Department department);
+        Task<List<Department>> AllDepartmentsAsync();
+        Task<DepartmentDto> CreateDepartmentAsync(Department department);
         Task<IEnumerable<Department>> GetDepartmentsByTeamIdAsync(Guid teamId);
-        Task<Department> GetDepartmentByIdAsync(Guid departmentId);
+        Task<Department> GetDepartmentByNameAsync(string departmentName);
+        Task<bool> UpdateDepartmentAsync(UpdateDepartmentDto department);
+        Task<bool> DeleteDepartmentAsync(Guid departmentId);
+
     }
 }

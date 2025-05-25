@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
 using WorkersManagement.Infrastructure.Enumerations;
@@ -26,7 +27,6 @@ namespace WorkersManagement.Core.Repositories
             {
                 _logger.LogError(ex.Message);
             }
-
         }
 
         public async Task<IEnumerable<Habit>> GetHabitsByTypeAsync(Guid workerId, HabitType type)
@@ -61,6 +61,42 @@ namespace WorkersManagement.Core.Repositories
                 return null!;
             }
 
+        }
+
+        public async Task<bool> UpdateHabitAsync(UpdateHabitDto habit)
+        {
+            var existing = await _context.Habits.FindAsync(habit.Id);
+            if (existing == null) return false;
+
+            existing.Type = habit.Type;
+            existing.CompletedAt = habit.CompletedAt;
+            existing.Notes = habit.Notes;
+            existing.Amount = habit.Amount;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteHabitAsync(DeleteHabitDto habitId)
+        {
+            var habit = await _context.Habits.FindAsync(habitId);
+            if (habit == null) return false;
+
+            _context.Habits.Remove(habit);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<Habit?> GetHabitsByIdAsync(Guid habitId)
+        {
+            return await _context.Habits
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == habitId);
+        }
+
+        public async Task<IEnumerable<Habit>> GetAllHabit()
+        {
+            return await _context.Habits.ToListAsync();
         }
     }
 }

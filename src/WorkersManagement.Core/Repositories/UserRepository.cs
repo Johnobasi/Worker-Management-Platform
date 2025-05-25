@@ -27,7 +27,7 @@ namespace WorkersManagement.Core.Repositories
             if (string.IsNullOrEmpty(dto.Email) || _context.Users.Any(u => u.Email == dto.Email))
                 throw new InvalidOperationException("Email is required or user with this email already exists.");
 
-            var department = dto.DepartmentId.HasValue ? await _departmentRepository.GetDepartmentByIdAsync(dto.DepartmentId.Value) : null;
+            var department = dto.DepartmentId.HasValue ? await _departmentRepository.GetDepartmentByNameAsync(dto.FirstName) : null;
             if (dto.Role == UserRole.Worker && department == null)
                 throw new ArgumentException("Department is required for a Worker role.");
 

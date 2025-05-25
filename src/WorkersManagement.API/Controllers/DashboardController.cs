@@ -36,7 +36,7 @@ namespace WorkersManagement.API.Controllers
                     worker.FirstName,
                     worker.LastName,
                     Department = worker.Department.Name,
-                    Team = worker.Department.Team.Name
+                    Team = worker.Department.Teams.Name
                 },
                 Attendance = attendances.Count(),
                 Reward = workerReward,//

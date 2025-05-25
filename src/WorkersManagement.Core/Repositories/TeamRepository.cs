@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
 
@@ -22,11 +23,34 @@ namespace WorkersManagement.Core.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Team?> GetTeamByIdAsync(Guid teamId)
+        public async Task<Team?> GetTeamByNameAsync(string teamName)
         {
-           return await _context.Teams
+            return await _context.Teams
                 .Include(t => t.Departments)
-                .FirstOrDefaultAsync(t => t.Id == teamId);
+                .FirstOrDefaultAsync(t => t.Name.Trim().ToLower() == teamName.Trim().ToLower());
+        }
+
+        public async Task<bool> UpdateTeamAsync(UpdateTeamDto team)
+        {
+            var existingTeam = await _context.Teams.FindAsync(team.Id);
+            if (existingTeam == null) return false;
+
+            existingTeam.Name = team.Name;
+            existingTeam.Description = team.Description;
+
+            _context.Teams.Update(existingTeam);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteTeamAsync(Guid teamId)
+        {
+            var team = await _context.Teams.FindAsync(teamId);
+            if (team == null) return false;
+
+            _context.Teams.Remove(team);
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

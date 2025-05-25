@@ -23,6 +23,7 @@ namespace WorkersManagement.Core
 
             services.AddScoped<IDepartmentRepository, DepartmentRepository>();
             services.AddScoped<ITeamRepository, TeamRepository>();
+            services.AddScoped<IHabitRepository, HabitRepository>();
 
 
             services.AddHostedService<SundayRewardProcessor>();

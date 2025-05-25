@@ -61,7 +61,7 @@ namespace WorkersManagement.API.Controllers
                 Date = a.CreatedAt.ToString("yyyy-MM-dd"),
                 Status = a.Status,
                 Department = a.Worker.Department.Name,
-                Team = a.Worker.Department.Team.Name
+                Team = a.Worker.Department.Teams.Name
             }));
 
             var habitsCsv = GenerateCsv(habitsData.Select(h => new
@@ -73,7 +73,7 @@ namespace WorkersManagement.API.Controllers
                 Notes = h.Notes,
                 Amount = h.Type == HabitType.Giving ? h.Amount : null,
                 Department = h.Worker.Department.Name,
-                Team = h.Worker.Department.Team.Name
+                Team = h.Worker.Department.Teams.Name
             }));
 
             var combinedCsv = $"Attendance Report\n{attendanceCsv}\n\nHabit Report\n{habitsCsv}";
