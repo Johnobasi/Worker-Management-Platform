@@ -44,13 +44,6 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
-        [HttpGet("getby-type/{type}")]
-        public async Task<IActionResult> GetHabitsByType(Guid workerId, HabitType type)
-        {
-            var habits = await _habitService.GetHabitsByTypeAsync(workerId, type);
-            return Ok(habits);
-        }
-
         [HttpPut("update-habit/{id}")]
         public async Task<IActionResult> UpdateHabitAsync(Guid id, [FromBody] UpdateHabitDto dto)
         {

@@ -7,6 +7,7 @@ using ZXing;
 using ZXing.Common;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Drawing;
 
 namespace WorkersManagement.Core.Repositories
 {
@@ -153,15 +154,5 @@ namespace WorkersManagement.Core.Repositories
 
             await _context.SaveChangesAsync();
         }
-
-
-        #region helpers
-        private string FormatBarcodeLabel(string value)
-        {
-            // Group digits into chunks of 4 or 5
-            return string.Join(" ", Enumerable.Range(0, value.Length / 4)
-                .Select(i => value.Substring(i * 4, 4)));
-        }
-        #endregion
     }
 }
