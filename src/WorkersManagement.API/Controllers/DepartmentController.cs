@@ -32,7 +32,7 @@ namespace WorkersManagement.API.Controllers
                     Name = d.Name,
                     Description = d.Description,
                     TeamName = d.Teams?.Name,
-                    Users = d.Users?.Select(u => u.FirstName).ToList() ?? new List<string>() 
+                    Users = d.Workers?.Select(u => u.FirstName).ToList() ?? new List<string>() 
                 }).ToList();
 
                 return Ok(result);
@@ -93,7 +93,7 @@ namespace WorkersManagement.API.Controllers
                     Name = department.Name,
                     Description = department.Description,
                     TeamName = department.Teams?.Name,
-                    Users = department.Users?.Select(u => u.FirstName).ToList() ?? new List<string>()
+                    Users = department.Workers?.Select(u => u.FirstName).ToList() ?? new List<string>()
                 };
                 if (department == null)
                     return NotFound($"Department with Name '{departmentName}' not found.");

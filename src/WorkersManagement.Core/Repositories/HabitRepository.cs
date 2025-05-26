@@ -16,17 +16,13 @@ namespace WorkersManagement.Core.Repositories
             _context = workerDbContext;
             _logger = logger;
         }
-        public async Task AddHabitAsync(Habit habit)
+        public async Task<Habit> AddHabitAsync(Habit habit)
         {
-            try
-            {
-                _context.Habits.Add(habit);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex.Message);
-            }
+
+            _context.Habits.Add(habit);
+            await _context.SaveChangesAsync();
+            return habit;
+
         }
 
         public async Task<IEnumerable<Habit>> GetHabitsByTypeAsync(Guid workerId, HabitType type)
@@ -35,7 +31,7 @@ namespace WorkersManagement.Core.Repositories
             try
             {
                 return await _context.Habits
-                    .Where(h => h.WorkerId == workerId && h.Type == type)
+                    .Where(h => h.WorkerId == workerId || h.Type == type)
                      .ToListAsync();
             }
             catch (Exception ex)
@@ -46,13 +42,13 @@ namespace WorkersManagement.Core.Repositories
 
         }
 
-        public async Task<IEnumerable<Habit>> GetHabitsByWorkerIdAsync(List<Guid> workerIds)
+        public async Task<IEnumerable<Habit?>> GetHabitsByWorkerIdAsync(List<Guid> workerIds)
         {
             _logger.LogInformation("Getting habits for worker with id");
             try
             {
                 return await _context.Habits
-                    .Where(h => workerIds.Contains(h.WorkerId))
+                    .Where(h => workerIds.Contains(h.WorkerId!.Value))
                      .ToListAsync();
             }
             catch (Exception ex)
@@ -98,5 +94,21 @@ namespace WorkersManagement.Core.Repositories
         {
             return await _context.Habits.ToListAsync();
         }
+
+        public async Task<bool> MapHabitToWorkerAsync(Guid habitId, Guid workerId)
+        {
+            var habit = await _context.Habits.FindAsync(habitId);
+            if (habit == null)
+                return false;
+
+            var worker = await _context.Workers.FindAsync(workerId);
+            if (worker == null)
+                return false;
+
+            habit.WorkerId = worker.Id;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
     }
 }

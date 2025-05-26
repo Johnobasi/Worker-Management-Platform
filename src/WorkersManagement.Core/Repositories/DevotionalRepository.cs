@@ -62,7 +62,7 @@ namespace WorkersManagement.Core.Repositories
 
         }
 
-        public async Task<Devotional> GetDevotionalByIdAsync(Guid id)
+        public async Task<Devotional?> GetDevotionalByIdAsync(Guid id)
         {
             _logger.LogInformation($"Getting devotional with id: {id}");
             try

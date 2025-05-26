@@ -29,15 +29,13 @@ namespace WorkersManagement.API.Controllers
             {
                 var habit = new Habit
                 {
-                    Id = Guid.NewGuid(),
                     Type = request.Type,
-                    CompletedAt = DateTime.UtcNow,
                     Notes = request.Notes,
                     Amount = request.Amount
                 };
 
                 await _habitService.AddHabitAsync(habit);
-                return Ok();
+                return Ok("Habit successfully added.");
             }
             catch (Exception ex)
             {
@@ -46,18 +44,10 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
-        [HttpGet("{workerId}/type/{type}")]
+        [HttpGet("getby-type/{type}")]
         public async Task<IActionResult> GetHabitsByType(Guid workerId, HabitType type)
         {
             var habits = await _habitService.GetHabitsByTypeAsync(workerId, type);
-            return Ok(habits);
-        }
-
-        //get habit types
-        [HttpGet("types")]
-        public async Task<IActionResult> GetHabitTypes(Guid workersId, HabitType types)
-        {
-            var habits = await _habitService.GetHabitsByTypeAsync(workersId, types);
             return Ok(habits);
         }
 
@@ -109,5 +99,24 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while deleting the habit.");
             }
         }
+
+        [HttpPut("assign-worker")]
+        public async Task<IActionResult> AssignWorkerToHabit([FromBody] MapHabitToWorkerDto dto)
+        {
+            try
+            {
+                var result = await _habitService.MapHabitToWorkerAsync(dto.HabitId, dto.WorkerId);
+                if (!result)
+                    return NotFound("Habit or Worker not found.");
+
+                return Ok("Worker successfully assigned to habit.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning worker {WorkerId} to habit {HabitId}", dto.WorkerId, dto.HabitId);
+                return StatusCode(500, "An error occurred while assigning the worker.");
+            }
+        }
+
     }
 }

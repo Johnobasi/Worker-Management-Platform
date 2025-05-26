@@ -10,15 +10,12 @@ namespace WorkersManagement.Infrastructure.Configurations
         {
             builder.HasKey(q => q.Id);
 
-            builder.Property(q => q.QRCodeData)
-                  .IsRequired();
-
             builder.Property(q => q.CreatedAt)
                   .HasDefaultValueSql("GETUTCDATE()");
 
-            builder.HasOne<User>()
+            builder.HasOne<Worker>()
                   .WithOne() // Assuming one-to-one relationship with User
-                  .HasForeignKey<QRCode>(q => q.UserId)
+                  .HasForeignKey<QRCode>(q => q.WorkerId)
                   .OnDelete(DeleteBehavior.Cascade);
         }
     }

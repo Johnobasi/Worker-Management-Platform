@@ -1,9 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
@@ -16,34 +11,46 @@ namespace WorkersManagement.API.Controllers
     public class DevotionalController : ControllerBase
     {
         private readonly IDevotionalRepository _devotionalService;
-        private readonly IUserRepository _userRepository;
+        private readonly IWorkerManagementRepository _userRepository;
         private readonly IEmailService _emailService;
+        private readonly ILogger<DevotionalController> _logger;
 
-        public DevotionalController(IDevotionalRepository devotionalService, IUserRepository userRepository, IEmailService emailService)
+        public DevotionalController(IDevotionalRepository devotionalService, IWorkerManagementRepository userRepository, 
+            IEmailService emailService, ILogger<DevotionalController> logger)
         {
             _devotionalService = devotionalService;
             _userRepository = userRepository;
             _emailService = emailService;
+            _logger = logger;
         }
 
-        [Authorize(Roles = "Admin")]
-        [HttpPost("upload")]
+        [HttpPost("upload-devotionals")]
         public async Task<IActionResult> UploadDevotional([FromForm] UploadDevotionalRequest request)
         {
             if (request.File == null || request.File.Length == 0)
                 return BadRequest("No file uploaded.");
 
-            // Delete old devotional
+            // Ensure directory exists
+            var devotionalFolder = Path.Combine(Directory.GetCurrentDirectory(), "Devotionals");
+            if (!Directory.Exists(devotionalFolder))
+                Directory.CreateDirectory(devotionalFolder);
+
+            // Delete old devotionals
             var oldDevotionals = await _devotionalService.GetAllDevotionalsAsync();
             foreach (var oldDevotional in oldDevotionals)
             {
-                System.IO.File.Delete(oldDevotional.FilePath);
+                var fullOldPath = Path.Combine(Directory.GetCurrentDirectory(), oldDevotional.FilePath);
+                if (System.IO.File.Exists(fullOldPath))
+                    System.IO.File.Delete(fullOldPath);
+
                 await _devotionalService.DeleteDevotionalAsync(oldDevotional.Id);
             }
 
             // Save new devotional
-            var filePath = Path.Combine("Devotionals", $"{Guid.NewGuid()}_{request.File.FileName}");
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            var fileName = $"{Guid.NewGuid()}_{request.File.FileName}";
+            var fullFilePath = Path.Combine(devotionalFolder, fileName);
+
+            using (var stream = new FileStream(fullFilePath, FileMode.Create))
             {
                 await request.File.CopyToAsync(stream);
             }
@@ -51,47 +58,94 @@ namespace WorkersManagement.API.Controllers
             var newDevotional = new Devotional
             {
                 Id = Guid.NewGuid(),
-                FilePath = filePath,
+                FilePath = Path.Combine("Devotionals", fileName), // Relative path for storage
                 UploadedAt = DateTime.UtcNow
             };
 
             await _devotionalService.AddDevotionalAsync(newDevotional);
 
-            // Send email notification to all users
-            var users = await _userRepository.GetAllUsersAsync();
+            // Send email notifications
+            var users = await _userRepository.GetAllWorkersAsync();
             foreach (var user in users)
             {
-                await _emailService.SendEmailAsync(user.Email, "New Monthly Devotional Available", "A new monthly devotional has been uploaded. Please check your dashboard to download it.");
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "New Monthly Devotional Available",
+                    "A new monthly devotional has been uploaded. Please check your dashboard to download it."
+                );
             }
 
-            return Ok();
+            return Ok("Devotional uploaded and notifications sent.");
         }
+
 
         [HttpGet("download/{id}")]
         public async Task<IActionResult> DownloadDevotional(Guid id)
         {
-            var devotional = await _devotionalService.GetDevotionalByIdAsync(id);
-            if (devotional == null)
-                return NotFound();
+            try
+            {
+                var devotional = await _devotionalService.GetDevotionalByIdAsync(id);
+                if (devotional == null)
+                    return NotFound("Devotional not found.");
 
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(devotional.FilePath);
-            var fileName = Path.GetFileName(devotional.FilePath);
-            return File(fileBytes, "application/octet-stream", fileName);
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), devotional.FilePath);
+                if (!System.IO.File.Exists(fullPath))
+                    return NotFound("Devotional file is missing.");
+
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+                var fileName = Path.GetFileName(fullPath);
+
+                return File(fileBytes, "application/octet-stream", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while downloading devotional with ID {DevotionalId}", id);
+                return StatusCode(500, "An error occurred while downloading the devotional.");
+            }
+
         }
 
-        [HttpGet]
+
+        [HttpGet("get-all-devotionals")]
         public async Task<IActionResult> GetAllDevotionals()
         {
-            var devotionals = await _devotionalService.GetAllDevotionalsAsync();
-            return Ok(devotionals);
+            try
+            {
+                var devotionals = await _devotionalService.GetAllDevotionalsAsync();
+                return Ok(devotionals);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving all devotionals.");
+                return StatusCode(500, "An error occurred while fetching the devotionals.");
+            }
         }
 
-        //DELETE api/devotional/delete/{id}
-        [HttpDelete]
+
+        [HttpDelete("delete-devotional/{id}")]
         public async Task<IActionResult> DeleteDevotional(Guid id)
         {
-            await _devotionalService.DeleteDevotionalAsync(id);
-            return Ok();
+            try
+            {
+                var devotional = await _devotionalService.GetDevotionalByIdAsync(id);
+                if (devotional == null)
+                    return NotFound("Devotional not found.");
+
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), devotional.FilePath);
+                if (System.IO.File.Exists(fullPath))
+                    System.IO.File.Delete(fullPath);
+
+                await _devotionalService.DeleteDevotionalAsync(id);
+
+                return Ok("Devotional deleted successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting devotional with ID {DevotionalId}", id);
+                return StatusCode(500, "An error occurred while deleting the devotional.");
+            }
         }
+
+
     }
 }

@@ -11,12 +11,12 @@ namespace WorkersManagement.Core.Repositories
     public class AttendanceRepository : IAttendanceRepository
     {
         private readonly WorkerDbContext _context;
-        private readonly IQRCodeRepository _qrCodeRepository;
-        private readonly IUserRepository _userRepository;
+        private readonly IBarcodeRepository _qrCodeRepository;
+        private readonly IWorkerManagementRepository _userRepository;
         private readonly ILogger<AttendanceRepository> _logger;
         public AttendanceRepository(WorkerDbContext workerDbContext, 
-            IQRCodeRepository qrCodeRepository, 
-            IUserRepository userRepository, ILogger<AttendanceRepository> logger)
+            IBarcodeRepository qrCodeRepository, 
+            IWorkerManagementRepository userRepository, ILogger<AttendanceRepository> logger)
         {
             _context = workerDbContext;
             _qrCodeRepository = qrCodeRepository;
@@ -60,58 +60,42 @@ namespace WorkersManagement.Core.Repositories
                 _logger.LogError(ex.Message);
                 return null!;
             }
-
-
-           // return await _context.Attendances
-           //.Include(a => a.Worker)
-           //.Where(a => a.WorkerId == workerId &&
-           //           a.CheckInTime >= startDate &&
-           //           a.CheckInTime.DayOfWeek == DayOfWeek.Sunday)
-           //.Select(a => new Attendance
-           //{
-           //    Id = a.Id,
-           //    WorkerId = a.WorkerId,
-           //    CheckInTime = a.CheckInTime,
-           //    Status = a.Status,
-           //    IsEarlyCheckIn = a.CheckInTime.Hour <= 8
-           //})
-           //.OrderByDescending(a => a.CheckInTime)
-           //.ToListAsync();
         }
 
         public async Task<bool> MarkAttendanceAsync(string qrCodeData)
         {
             try
             {
-                // Step 1: Decode and extract the user ID from the QR code
-                var qrCodePayload = JsonSerializer.Deserialize<QRCode>(qrCodeData);
-                if (qrCodePayload == null || qrCodePayload.UserId == Guid.Empty)
-                    throw new ArgumentException("Invalid QR code data.");
+                if (string.IsNullOrWhiteSpace(qrCodeData))
+                    throw new ArgumentException("QR code data is empty.");
 
-                var userId = qrCodePayload.UserId;
+                // Step 1: Extract WorkerNumber from the string
+                string[] parts = qrCodeData.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 1)
+                    throw new ArgumentException("Invalid QR code format. Expected: 'WORKERNUMBER FirstName LastName'");
 
-                // Step 2: Validate the user and their QR code
-                var user = await _userRepository.GetUserByIdAsync(userId);
-                if (user == null)
+                string workerNumber = parts[0];
+
+                // Step 2: Look up worker by WorkerNumber
+                var worker = await _userRepository.GetWorkerByNumberAsync(workerNumber);
+                if (worker == null)
                     throw new KeyNotFoundException("User not found.");
 
-                var qrCode = await _qrCodeRepository.GetQRCodeByIdAsync(userId);
-                if (qrCode == null || qrCode.IsDisabled)
+                var qrCode = await _qrCodeRepository.GetBarcodeByWorkerIdAsync(worker.Id);
+                if (qrCode == null || qrCode.IsActive)
                     throw new ArgumentException("QR code is invalid or disabled.");
 
                 // Step 3: Mark the attendance
                 var attendance = new Attendance
                 {
-                    
-                    Id = Guid.NewGuid(),
-                    WorkerId = user.Id,
+                    WorkerId = worker.Id,
                     CheckInTime = DateTime.UtcNow,
                     Type = AttendanceType.SundayService,
                     CreatedAt = DateTime.UtcNow
                 };
 
                 await AddAttendanceAsync(attendance);
-
+                _logger.LogInformation($"✅ Attendance marked for {worker.WorkerNumber} - {worker.FirstName} {worker.LastName}");
                 return true;
             }
             catch (Exception ex)

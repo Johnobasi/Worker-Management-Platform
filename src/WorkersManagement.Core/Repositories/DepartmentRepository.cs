@@ -27,7 +27,7 @@ namespace WorkersManagement.Core.Repositories
         public async Task<Department?> GetDepartmentByNameAsync(string  departmentName)
         {
             return await _context.Departments
-                .Include(d => d.Users)
+                .Include(d => d.Workers)
                 .Include(d=>d.Teams)
                 .FirstOrDefaultAsync(t => t.Name.Trim().ToLower() == departmentName.Trim().ToLower());
         }
@@ -64,7 +64,7 @@ namespace WorkersManagement.Core.Repositories
         public async Task<List<Department>> AllDepartmentsAsync()
         {
             return await _context.Departments
-                    .Include(d => d.Users)
+                    .Include(d => d.Workers)
                          .Include(d => d.Teams)
                              .ToListAsync();
         }

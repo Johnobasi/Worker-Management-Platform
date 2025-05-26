@@ -15,74 +15,178 @@ namespace WorkersManagement.API.Controllers
         {
             _attendanceRepository = attendanceRepository;
             _habitRepository = habitRepository;
-
-
         }
 
-
-        [HttpGet("export-report")]
-        public async Task<IActionResult> ExportReport(
-             [FromQuery] bool isAdmin,
-             [FromQuery] DateTime? startDate = null,
-             [FromQuery] DateTime? endDate = null,
-             [FromQuery] Guid? teamId = null,
-               [FromQuery] Guid? departmentId = null)
+        [HttpGet("worker-activity-summary")]
+        public async Task<IActionResult> GetWorkerActivitySummary(
+              [FromQuery] bool isAdmin,
+              [FromQuery] DateTime? startDate = null,
+              [FromQuery] DateTime? endDate = null,
+              [FromQuery] string? teamName = null,
+              [FromQuery] string? departmentName = null)
         {
             if (!isAdmin)
-                return Forbid("Only admins can export reports.");
+                return Forbid("Only admins can view this report.");
 
-            // Default date range if not provided
-            startDate ??= DateTime.UtcNow.AddMonths(-1);
+            startDate ??= new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             endDate ??= DateTime.UtcNow;
 
-            // Fetch attendance and habit data
             var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate.Value, endDate.Value);
 
-            // Filter attendance by department or team
-            if (departmentId.HasValue)
+            if (!string.IsNullOrWhiteSpace(departmentName))
             {
-                attendanceData = attendanceData.Where(a => a.Worker.DepartmentId == departmentId).ToList();
+                departmentName = departmentName.Trim().ToLower();
+                attendanceData = attendanceData
+                    .Where(a => a.Worker.Department != null &&
+                                a.Worker.Department.Name.ToLower() == departmentName)
+                    .ToList();
             }
-            else if (teamId.HasValue)
+            else if (!string.IsNullOrWhiteSpace(teamName))
             {
-                attendanceData = attendanceData.Where(a => a.Worker.Department.TeamId == teamId).ToList();
+                teamName = teamName.Trim().ToLower();
+                attendanceData = attendanceData
+                    .Where(a => a.Worker.Department?.Teams != null &&
+                                a.Worker.Department.Teams.Name.ToLower() == teamName)
+                    .ToList();
             }
 
             var workerIds = attendanceData.Select(a => a.WorkerId).Distinct().ToList();
 
-            // Fetch habit data for filtered workers
             var habitsData = await _habitRepository.GetHabitsByWorkerIdAsync(workerIds);
+            habitsData = habitsData
+                .Where(h => h.CompletedAt >= startDate.Value && h.CompletedAt <= endDate.Value)
+                .ToList();
 
-            // Generate CSV content
+            var summaries = attendanceData
+                .GroupBy(a => a.Worker)
+                .Select(g =>
+                {
+                    var worker = g.Key;
+                    var habitCount = habitsData.Count(h => h.WorkerId == worker.Id);
+
+                    return new
+                    {
+                        WorkerId = worker.Id,
+                        Name = $"{worker.FirstName} {worker.LastName}",
+                        Email = worker.Email,
+                        Department = worker.Department?.Name,
+                        Team = worker.Department?.Teams?.Name,
+                        AttendanceCount = g.Count(),
+                        HabitCount = habitCount
+                    };
+                })
+                .OrderBy(s => s.Name)
+                .ToList();
+
+            var csv = GenerateCsv(summaries);
+            return File(Encoding.UTF8.GetBytes(csv), "text/csv", $"worker_activity_summary_{DateTime.UtcNow:yyyyMMdd}.csv");
+        }
+
+        [HttpGet("export-attendance")]
+        public async Task<IActionResult> ExportAttendanceReport(
+         [FromQuery] bool isAdmin,
+         [FromQuery] DateTime? startDate = null,
+         [FromQuery] DateTime? endDate = null,
+         [FromQuery] string? teamName = null,
+         [FromQuery] string? departmentName = null)
+        {
+            if (!isAdmin)
+                return Forbid("Only admins can export reports.");
+
+            startDate ??= DateTime.UtcNow.AddMonths(-1);
+            endDate ??= DateTime.UtcNow;
+
+            var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate.Value, endDate.Value);
+
+            // Apply department/team name filters
+            if (!string.IsNullOrWhiteSpace(departmentName))
+            {
+                departmentName = departmentName.Trim().ToLower();
+                attendanceData = attendanceData
+                    .Where(a => a.Worker.Department != null &&
+                                a.Worker.Department.Name.ToLower() == departmentName)
+                    .ToList();
+            }
+            else if (!string.IsNullOrWhiteSpace(teamName))
+            {
+                teamName = teamName.Trim().ToLower();
+                attendanceData = attendanceData
+                    .Where(a => a.Worker.Department?.Teams != null &&
+                                a.Worker.Department.Teams.Name.ToLower() == teamName)
+                    .ToList();
+            }
+
+            var workerIds = attendanceData.Select(a => a.WorkerId).Distinct().ToList();
+
+            var habitsData = await _habitRepository.GetHabitsByWorkerIdAsync(workerIds);
+            habitsData = habitsData
+                .Where(h => h.CompletedAt >= startDate.Value && h.CompletedAt <= endDate.Value)
+                .ToList();
+
             var attendanceCsv = GenerateCsv(attendanceData.Select(a => new
             {
                 WorkerId = a.WorkerId,
-                WorkerName = a.Worker.FirstName + " " + a.Worker.LastName,
+                WorkerName = $"{a.Worker.FirstName} {a.Worker.LastName}",
                 Date = a.CreatedAt.ToString("yyyy-MM-dd"),
                 Status = a.Status,
-                Department = a.Worker.Department.Name,
-                Team = a.Worker.Department.Teams.Name
+                Department = a.Worker.Department?.Name,
+                Team = a.Worker.Department?.Teams?.Name
             }));
 
             var habitsCsv = GenerateCsv(habitsData.Select(h => new
             {
                 WorkerId = h.WorkerId,
-                WorkerName = h.Worker.FirstName + " " + h.Worker.LastName,
+                WorkerName = $"{h.Worker.FirstName} {h.Worker.LastName}",
                 HabitType = h.Type.ToString(),
                 CompletedAt = h.CompletedAt.ToString("yyyy-MM-dd"),
                 Notes = h.Notes,
                 Amount = h.Type == HabitType.Giving ? h.Amount : null,
-                Department = h.Worker.Department.Name,
-                Team = h.Worker.Department.Teams.Name
+                Department = h.Worker.Department?.Name,
+                Team = h.Worker.Department?.Teams?.Name
             }));
 
-            var combinedCsv = $"Attendance Report\n{attendanceCsv}\n\nHabit Report\n{habitsCsv}";
-
-            var bytes = Encoding.UTF8.GetBytes(combinedCsv);
-
-            // Return as a downloadable CSV file
-            return File(bytes, "text/csv", "report.csv");
+            var combined = $"Attendance Report\n{attendanceCsv}\n\nHabit Report\n{habitsCsv}";
+            return File(Encoding.UTF8.GetBytes(combined), "text/csv", $"attendance_report_{DateTime.UtcNow:yyyyMMdd}.csv");
         }
+
+
+        [HttpGet("export-summary")]
+        public async Task<IActionResult> ExportWorkerSummaryReport(
+          [FromQuery] bool isAdmin,
+          [FromQuery] DateTime? startDate = null,
+          [FromQuery] DateTime? endDate = null)
+        {
+            if (!isAdmin)
+                return Forbid("Only admins can export summary.");
+
+            startDate ??= DateTime.UtcNow.AddMonths(-1);
+            endDate ??= DateTime.UtcNow;
+
+            var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate.Value, endDate.Value);
+
+            var departmentSummary = attendanceData
+                .GroupBy(a => a.Worker.Department.Name)
+                .Select(g => new
+                {
+                    Department = g.Key,
+                    WorkerCount = g.Select(a => a.WorkerId).Distinct().Count()
+                });
+
+            var teamSummary = attendanceData
+                .GroupBy(a => a.Worker.Department.Teams.Name)
+                .Select(g => new
+                {
+                    Team = g.Key,
+                    WorkerCount = g.Select(a => a.WorkerId).Distinct().Count()
+                });
+
+            var deptCsv = GenerateCsv(departmentSummary);
+            var teamCsv = GenerateCsv(teamSummary);
+
+            var combined = $"Department Summary\n{deptCsv}\n\nTeam Summary\n{teamCsv}";
+            return File(Encoding.UTF8.GetBytes(combined), "text/csv", $"worker_summary_{DateTime.UtcNow:yyyyMMdd}.csv");
+        }
+
 
         #region reports helpers
         private string GenerateCsv<T>(IEnumerable<T> data)

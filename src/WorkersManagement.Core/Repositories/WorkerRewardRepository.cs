@@ -11,7 +11,7 @@ namespace WorkersManagement.Core.Repositories
 {
     public class WorkerRewardRepository(
         IAttendanceRepository attendanceRepository, IEmailService emailService,
-        WorkerDbContext context, IUserRepository user, IConfiguration configuration,
+        WorkerDbContext context, IWorkerManagementRepository user, IConfiguration configuration,
         ILogger<WorkerRewardRepository> logger) : IWorkerRewardRepository
     {
         private readonly IAttendanceRepository _attendanceRepository = attendanceRepository;
@@ -20,7 +20,7 @@ namespace WorkersManagement.Core.Repositories
         private readonly int _consecutiveSundaysRequired = configuration!.GetValue<int>("RewardSettings:ConsecutiveSundaysRequired");
         private readonly int _earlyCheckInHour = configuration!.GetValue<int>("RewardSettings:EarlyCheckInHour");
         private readonly WorkerDbContext _context = context;
-        private readonly IUserRepository _user = user;
+        private readonly IWorkerManagementRepository _user = user;
         private readonly ILogger<WorkerRewardRepository> _logger = logger;
 
         public async Task ProcessSundayAttendance(Guid workerId, DateTime checkInTime)
@@ -109,7 +109,7 @@ namespace WorkersManagement.Core.Repositories
 
         public async Task NotifyWorker(Guid workerId)
         {
-            var user = await _user.GetUserByIdAsync(workerId);
+            var user = await _user.GetWorkerByIdAsync(workerId);
 
             var emailSubject = "Congratulations! You've Earned a Gift Voucher";
             var emailBody = $@"
@@ -163,12 +163,10 @@ namespace WorkersManagement.Core.Repositories
 
             try
             {
-                var worker = await _context.Users
+                var worker = await _context.Workers
                     .FirstOrDefaultAsync(w => w.Id == workerId);
                 if (worker != null)
                 {
-                    //worker.ConsecutiveSundayCount = 0;
-                    //worker.LastRewardDate = DateTime.UtcNow;
                     await _context.SaveChangesAsync();
                 }
             }

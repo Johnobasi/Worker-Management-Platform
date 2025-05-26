@@ -11,7 +11,16 @@ namespace WorkersManagement.API
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
+            builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy
+                        .AllowAnyOrigin()
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
             builder.Services.AddControllers()
              .AddJsonOptions(options =>
              {
@@ -24,7 +33,7 @@ namespace WorkersManagement.API
 
             //add infrastructure and other services
             builder.Services.AddInfrastructure(builder.Configuration);
-            builder.Services.AddCors();
+
             builder.Services.AddCore(builder.Configuration);
             var app = builder.Build();
 
@@ -34,7 +43,7 @@ namespace WorkersManagement.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
+            app.UseCors();
             app.UseHttpsRedirection();
 
             app.UseAuthorization();

@@ -13,9 +13,8 @@ namespace WorkersManagement.Core
         public static IServiceCollection AddCore(this IServiceCollection services, IConfiguration configuration)
         {
 
-            services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<IQRCodeRepository, QRCodeRepository>();
-            services.AddScoped<IUserRegistrationTokenRepository, UserRegistrationTokenRepository>();
+            services.AddScoped<IWorkerManagementRepository, WokerManagementRepository>();
+            services.AddScoped<IBarcodeRepository, QRCodeRepository>();
             services.AddScoped<IEmailService, SmtpEmailService>();
             services.AddScoped<IAttendanceRepository, AttendanceRepository>();
             services.AddScoped<IWorkerRewardRepository, WorkerRewardRepository>();
