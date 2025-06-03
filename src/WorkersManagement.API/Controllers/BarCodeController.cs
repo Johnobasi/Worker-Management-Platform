@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using WorkersManagement.Core.Repositories;
+﻿using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Domain.Interfaces;
 
 namespace WorkersManagement.API.Controllers
@@ -15,7 +12,7 @@ namespace WorkersManagement.API.Controllers
         public BarCodeController(IBarcodeRepository barcodeRepository, ILogger<BarCodeController> logger)
         {
                 _barcodeRepository = barcodeRepository;
-            _logger = logger;
+                _logger = logger;
         }
 
         [HttpGet("generate-download-barcode/{workerId}")]

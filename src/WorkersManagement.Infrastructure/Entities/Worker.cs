@@ -14,6 +14,10 @@ namespace WorkersManagement.Infrastructure
         public string QRCode { get; set; }
         public bool Status { get; set; }
         public string Email { get; set; }
+        public string PasswordHash { get; set; }
+        public DateTime? LastLogin { get; set; }
+        public string PasswordResetToken { get; set; }
+        public DateTime? PasswordResetTokenExpiration { get; set; }
         public int ConsecutiveSundayCount { get; set; }
         public DateTime? LastRewardDate { get; set; }
         public Department Department { get; set; }

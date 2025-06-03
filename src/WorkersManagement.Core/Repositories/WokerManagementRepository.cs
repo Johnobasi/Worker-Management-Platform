@@ -33,6 +33,9 @@ namespace WorkersManagement.Core.Repositories
             if (string.IsNullOrWhiteSpace(dto.Email))
                 throw new ArgumentException("Email is required.");
 
+            if (string.IsNullOrWhiteSpace(dto.Password))
+                throw new ArgumentException("Password is required.");
+
             Department? department = null;
             string? teamCode = null;
 
@@ -49,22 +52,23 @@ namespace WorkersManagement.Core.Repositories
                 if (department.TeamId == Guid.Empty)
                     throw new ArgumentException($"Department '{dto.DepartmentName}' is not linked to any team.");
 
-                // Get team name
                 var team = await _context.Teams.FindAsync(department.TeamId);
                 if (team == null)
                     throw new ArgumentException("Team not found for department.");
 
-                // Get the code from mapping
                 if (!TeamCodeMap.TryGetValue(team.Name.Trim(), out teamCode))
                     throw new ArgumentException($"Team code for '{team.Name}' not defined.");
             }
 
             try
             {
-                // Count all workers created so far
                 var nextWorkerId = await _context.Workers.CountAsync() + 1;
-                var numericPart = nextWorkerId.ToString("D3"); // Pad to 3 digits
+                var numericPart = nextWorkerId.ToString("D3");
                 var workerNumber = $"{teamCode}{numericPart}";
+
+                // Hash password
+                var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password.Trim());
+
 
                 var workerToAdd = new Worker
                 {
@@ -73,7 +77,11 @@ namespace WorkersManagement.Core.Repositories
                     LastName = dto.LastName,
                     Role = UserRole.Worker,
                     Department = department,
-                    WorkerNumber = workerNumber
+                    WorkerNumber = workerNumber,
+                    PasswordHash = passwordHash,
+                    LastLogin = null,
+                    PasswordResetToken = null,
+                    PasswordResetTokenExpiration = null
                 };
 
                 await _context.Workers.AddAsync(workerToAdd);
@@ -89,8 +97,6 @@ namespace WorkersManagement.Core.Repositories
                 throw;
             }
         }
-
-
 
         public async Task DeleteWorkerAsync(Guid id)
         {
@@ -156,6 +162,5 @@ namespace WorkersManagement.Core.Repositories
         {
             return await _context.Workers.FirstOrDefaultAsync(w => w.WorkerNumber == workerNumber);
         }
-
     }
 }

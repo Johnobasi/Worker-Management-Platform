@@ -1,9 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
-using WorkersManagement.Infrastructure.Entities;
 using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Core.Repositories

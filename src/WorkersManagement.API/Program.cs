@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
 using WorkersManagement.Core;
 using WorkersManagement.Infrastructure;
