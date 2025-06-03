@@ -9,9 +9,11 @@
   <ItemGroup>
     <PackageReference Include="BarcodeLib" Version="3.1.5" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="MailKit" Version="4.12.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.11.0" />
+    <PackageReference Include="MimeKit" Version="4.12.0" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.16" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.11.0" />
     <PackageReference Include="ZXing.Net" Version="0.16.10" />
@@ -21,6 +23,21 @@
   <ItemGroup>
     <ProjectReference Include="..\WorkersManagement.Domain\WorkersManagement.Domain.csproj" />
     <ProjectReference Include="..\WorkersManagement.Infrastructure\WorkersManagement.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Templates\PasswordResetNewWorkerTemplate.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\PasswordToken.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Embed as resource -->
+    <EmbeddedResource Include="Templates\PasswordResetNewWorkerTemplate.html" />
+    <EmbeddedResource Include="Templates\PasswordToken.html" />
   </ItemGroup>
 
 </Project>

@@ -1,47 +1,48 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MailKit.Security;
 using Microsoft.Extensions.Options;
-using System.Net.Mail;
-using System.Net;
+using MimeKit;
+using MimeKit.Utils;
 using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.EmailConfigs;
 
 namespace WorkersManagement.Core.Repositories
 {
-    public class SmtpEmailService(IOptions<EmailConfiguration> emailConfig, ILogger<SmtpEmailService> logger) : IEmailService
+    public class SmtpEmailService(IOptions<EmailSettings> emailSettings) : IEmailService
     {
-        private readonly EmailConfiguration _emailConfig = emailConfig.Value;
-        private readonly ILogger<SmtpEmailService> _logger = logger;
+        private readonly EmailSettings _emailSettings = emailSettings.Value;
 
-        public async Task SendEmailAsync(string to, string subject, string body)
+        public async Task SendEmailAsync(string toEmail, string subject, string message)
         {
-            _logger.LogInformation($"Sending email to {to}");
-            using var smtpClient = new SmtpClient(_emailConfig.SmtpServer)
-            {
-                Port = _emailConfig.Port,
-                Credentials = new NetworkCredential(_emailConfig.Username, _emailConfig.Password),
-                EnableSsl = true
-            };
+            var emailMessage = new MimeMessage();
+            emailMessage.From.Add(new MailboxAddress(_emailSettings.SenderName, _emailSettings.Username));
+            emailMessage.To.Add(MailboxAddress.Parse(toEmail));
+            emailMessage.Subject = subject;
 
-            using var mailMessage = new MailMessage
-            {
-                From = new MailAddress(_emailConfig.FromAddress),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = true
-            };
+            var builder = new BodyBuilder();
 
-            mailMessage.To.Add(to);
+            // Embed logo from wwwroot/images
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string logoPath = Path.Combine(baseDir, "wwwroot", "images", "Harvesters-Logo.jpeg");
 
-            try
+            if (File.Exists(logoPath))
             {
-                await smtpClient.SendMailAsync(mailMessage);
-                _logger.LogInformation($"Email sent successfully to {to}");
+                var logo = builder.LinkedResources.Add(logoPath);
+                logo.ContentId = MimeUtils.GenerateMessageId();
+
+                // Replace <img src="/images/..."> with cid version
+                message = message.Replace("/images/Harvesters-Logo.jpeg", $"cid:{logo.ContentId}");
             }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Failed to send email to {to}: {ex.Message}");
-                throw;
-            }
+
+            builder.HtmlBody = message;
+            emailMessage.Body = builder.ToMessageBody();
+
+            using var client = new MailKit.Net.Smtp.SmtpClient();
+            await client.ConnectAsync(_emailSettings.Server, _emailSettings.Port, SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(_emailSettings.Username, _emailSettings.Password);
+            await client.SendAsync(emailMessage);
+            await client.DisconnectAsync(true);
         }
+
+
     }
 }

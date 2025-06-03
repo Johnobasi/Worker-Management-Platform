@@ -8,5 +8,7 @@ namespace WorkersManagement.Domain.Interfaces
         Task LogoutAsync(string email);
         Task RequestPasswordResetAsync(string email);
         Task ResetPasswordAsync(SetPasswordDto dto);
+        Task ResetPasswordAsync(string email, string token, string newPassword, string confirmPassword);
+        Task VerifyTokenAsync(string email, string token);
     }
 }

@@ -1,5 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Net;
+using System.Net.Mail;
+using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
@@ -9,11 +12,12 @@ using WorkersManagement.Infrastructure.Enumerations;
 namespace WorkersManagement.Core.Repositories
 {
     public class WokerManagementRepository(WorkerDbContext workerDbContext,
-        ILogger<WokerManagementRepository> logger, IDepartmentRepository departmentRepository) : IWorkerManagementRepository
+        ILogger<WokerManagementRepository> logger, IDepartmentRepository departmentRepository, IEmailService emailService) : IWorkerManagementRepository
     {
         private readonly WorkerDbContext _context = workerDbContext;
         private readonly ILogger<WokerManagementRepository> _logger = logger;
         private readonly IDepartmentRepository _departmentRepository = departmentRepository;
+       private readonly IEmailService _emailService = emailService;
 
         private static readonly Dictionary<string, string> TeamCodeMap = new()
         {
@@ -68,6 +72,9 @@ namespace WorkersManagement.Core.Repositories
 
                 // Hash password
                 var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password.Trim());
+                // Generate password reset token
+                var resetToken = Guid.NewGuid().ToString();
+                var resetTokenExpiration = DateTime.UtcNow.AddHours(24); // Token expires in 24 hours
 
 
                 var workerToAdd = new Worker
@@ -80,12 +87,22 @@ namespace WorkersManagement.Core.Repositories
                     WorkerNumber = workerNumber,
                     PasswordHash = passwordHash,
                     LastLogin = null,
-                    PasswordResetToken = null,
-                    PasswordResetTokenExpiration = null
+                    PasswordResetToken = resetToken,
+                    PasswordResetTokenExpiration = resetTokenExpiration
                 };
 
                 await _context.Workers.AddAsync(workerToAdd);
                 await _context.SaveChangesAsync();
+
+                // Generate reset link
+                var resetLink = $"https://www.harvestersuk.org/verify-token?email={Uri.EscapeDataString(workerToAdd.Email)}&token={resetToken}";
+
+                // Load and populate the HTML template
+                var subject = "Set Your Password - Workers CMS";
+                string body = await LoadAndPopulateEmailTemplate(workerToAdd, resetLink);
+
+                // Send password reset email
+                await _emailService.SendEmailAsync(workerToAdd.Email, subject,body);
 
                 _logger.LogInformation("Worker created with WorkerNumber: {WorkerNumber}", workerNumber);
 
@@ -161,6 +178,35 @@ namespace WorkersManagement.Core.Repositories
         public async Task<Worker?> GetWorkerByNumberAsync(string workerNumber)
         {
             return await _context.Workers.FirstOrDefaultAsync(w => w.WorkerNumber == workerNumber);
+        }
+
+        private async Task<string> LoadAndPopulateEmailTemplate(Worker worker, string resetLink)
+        {
+            try
+            {
+
+                string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                string templatePath = Path.Combine(baseDirectory, "Templates", "PasswordResetNewWorkerTemplate.html");
+                if (!File.Exists(templatePath))
+                {
+                    _logger.LogError("Email template file not found at {Path}", templatePath);
+                    throw new FileNotFoundException("Email template file not found", templatePath);
+                }
+
+                string template = await File.ReadAllTextAsync(templatePath);
+
+                template = template
+                    .Replace("{FirstName}", worker.FirstName)
+                    .Replace("{LastName}", worker.LastName)
+                    .Replace("{ResetLink}", resetLink);
+
+                return template;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load or populate email template for {Email}", worker.Email);
+                throw;
+            }
         }
     }
 }

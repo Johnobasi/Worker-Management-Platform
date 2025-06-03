@@ -29,7 +29,7 @@ namespace WorkersManagement.Core
 
             services.AddHostedService<SundayRewardProcessor>();
 
-            services.Configure<EmailConfiguration>(configuration.GetSection("Email"));
+            services.Configure<EmailSettings>(configuration.GetSection(nameof(EmailSettings)));
             return services;
         }
     }
