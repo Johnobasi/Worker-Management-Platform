@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
@@ -8,6 +9,7 @@ namespace WorkersManagement.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class DevotionalController : ControllerBase
     {
         private readonly IDevotionalRepository _devotionalService;
@@ -25,6 +27,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("upload-devotionals")]
+        [Authorize(Policy = "SuperAdmin")]
         public async Task<IActionResult> UploadDevotional([FromForm] UploadDevotionalRequest request)
         {
             if (request.File == null || request.File.Length == 0)
@@ -80,6 +83,7 @@ namespace WorkersManagement.API.Controllers
 
 
         [HttpGet("download/{id}")]
+        [Authorize(Policy = "Worker")]
         public async Task<IActionResult> DownloadDevotional(Guid id)
         {
             try
@@ -107,6 +111,7 @@ namespace WorkersManagement.API.Controllers
 
 
         [HttpGet("get-all-devotionals")]
+        [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetAllDevotionals()
         {
             try
@@ -123,6 +128,7 @@ namespace WorkersManagement.API.Controllers
 
 
         [HttpDelete("delete-devotional/{id}")]
+        [Authorize(Policy = "SuperAdmin")]
         public async Task<IActionResult> DeleteDevotional(Guid id)
         {
             try

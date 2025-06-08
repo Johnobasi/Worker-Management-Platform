@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Domain.Dtos.WorkerAuthentication;
 using WorkersManagement.Domain.Interfaces;
 
@@ -8,6 +9,7 @@ namespace WorkersManagement.API.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class WorkerAuthController : ControllerBase
     {
         private readonly IWorkersAuthRepository _authRepository;
@@ -20,6 +22,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("worker-login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             try
@@ -38,6 +41,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("worker-logout")]
+        [AllowAnonymous]
         public async Task<IActionResult> Logout([FromBody] LogoutRequestDto dto)
         {
             try
@@ -56,6 +60,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("request-password-reset")]
+        [AllowAnonymous]
         public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordResetRequestDto dto)
         {
             try
@@ -76,6 +81,7 @@ namespace WorkersManagement.API.Controllers
 
 
         [HttpPost("forgot-password")]
+        [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
         {
             try
@@ -95,6 +101,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("verify-token")]
+        [AllowAnonymous]
         public async Task<IActionResult> VerifyToken([FromBody] VerifyTokenDto dto)
         {
             try
@@ -114,6 +121,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("reset-password")]
+        [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
             try

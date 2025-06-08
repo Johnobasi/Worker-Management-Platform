@@ -1,27 +1,34 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Entities;
 using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class HabitController(IHabitRepository habitService, ILogger<HabitController> logger) : ControllerBase
+    [Authorize]
+    public class HabitController(IHabitRepository habitService, ILogger<HabitController> logger, IHabitCompletionRepository habitCompletionRepository) : ControllerBase
     {
         private readonly IHabitRepository _habitService = habitService;
         private readonly ILogger<HabitController> _logger = logger;
+        private readonly IHabitCompletionRepository _habitCompletionRepository = habitCompletionRepository;
 
         [HttpGet("get-habits")]
+        [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetAllAsync()
         {
             var allHabits = await _habitService.GetAllHabit();
+            _ = allHabits.Count();
             return Ok(allHabits);
         }
 
         [HttpPost("add-habit")]
+        [Authorize(Policy = "Worker")]
         public async Task<IActionResult> AddHabit([FromBody] AddHabitRequest request)
         {
 
@@ -45,6 +52,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPut("update-habit/{id}")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UpdateHabitAsync(Guid id, [FromBody] UpdateHabitDto dto)
         {
             try
@@ -76,6 +84,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpDelete("delete-habit/{id}")]
+        [Authorize(Policy = "SuperAdmin")]
         public async Task<IActionResult> DeleteHabitAsync(DeleteHabitDto id)
         {
             try
@@ -94,6 +103,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPut("assign-worker")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> AssignWorkerToHabit([FromBody] MapHabitToWorkerDto dto)
         {
             try
@@ -109,6 +119,40 @@ namespace WorkersManagement.API.Controllers
                 _logger.LogError(ex, "Error assigning worker {WorkerId} to habit {HabitId}", dto.WorkerId, dto.HabitId);
                 return StatusCode(500, "An error occurred while assigning the worker.");
             }
+        }
+
+        [HttpPost("mark-completion")]
+        [Authorize(Policy = "Worker")]
+        public async Task<IActionResult> MarkHabitCompletion([FromBody] MarkHabitCompletionDto request)
+        {
+            try
+            {
+                var workerId = Guid.Parse(User.FindFirst("WorkerId")?.Value!);
+
+                var completion = new UpdateHabit
+                {
+                    Id = Guid.NewGuid(),
+                    HabitId = request.HabitId,
+                    WorkerId = workerId,
+                    Type = request.Type,
+                    CompletedAt = request.CompletionDate ?? DateTime.UtcNow
+                };
+
+                await _habitCompletionRepository.AddCompletionAsync(completion);
+                return Ok("Habit completion recorded successfully.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while marking habit completion");
+                return StatusCode(500, "An error occurred while recording the habit completion.");
+            }
+        }
+
+        public record MarkHabitCompletionDto
+        {
+            public Guid HabitId { get; init; }
+            public HabitType Type { get; init; }
+            public DateTime? CompletionDate { get; init; }
         }
 
     }

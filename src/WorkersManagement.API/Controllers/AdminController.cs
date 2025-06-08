@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Core.Repositories;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Workers;
 using WorkersManagement.Domain.Interfaces;
+using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+   // [Authorize]
     public class AdminController : ControllerBase
     {
         private readonly IWorkerManagementRepository _workersRepository;
@@ -21,13 +24,28 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("create-worker")]
+       // [Authorize(Policy = "Admin")]
         public async Task<IActionResult> CreateWorker([FromBody] CreateNewWorkerDto dto)
         {
             try
             {
-                var worker = await _workersRepository.CreateWorkerAsync(dto);
+                if (User.IsInRole(UserRole.SubTeamLead.ToString()) || User.IsInRole(UserRole.HOD.ToString()))
+                {
+                    var department = await _departmentRepository.GetDepartmentByNameAsync(dto.DepartmentName);
+                    if (department == null)
+                        return BadRequest("Specified department does not exist.");
+
+                    var userDepartmentId = User.FindFirst("DepartmentId")?.Value;
+                    var userTeamId = User.FindFirst("TeamId")?.Value;
+
+                    if (User.IsInRole(UserRole.SubTeamLead.ToString()) && department.TeamId.ToString() != userTeamId)
+                        return Forbid("SubTeamLeads can only add workers to their own subteam's departments.");
+                    if (User.IsInRole(UserRole.HOD.ToString()) && department.Id.ToString() != userDepartmentId)
+                        return Forbid("HODs can only add workers to their own department.");
+                }
+                    var worker = await _workersRepository.CreateWorkerAsync(dto);
                 _logger.LogInformation("Worker created successfully with email: {Email}", dto.Email);
-                return Ok(worker);
+                return CreatedAtAction(nameof(GetWorkerById), new { id = worker.Id }, worker);
             }
             catch (Exception ex)
             {
@@ -37,6 +55,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpDelete("delete-worker/{id}")]
+        [Authorize(Policy = "SuperAdmin")]
         public async Task<IActionResult> DeleteWorker(Guid id)
         {
             try
@@ -54,11 +73,13 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("get-workers")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> GetAllWorkers()
         {
             try
             {
                 var workers = await _workersRepository.GetAllWorkersAsync();
+                workers.Count();
                 _logger.LogInformation("Fetched {Count} workers successfully", workers.Count());
                 return Ok(workers);
             }
@@ -70,10 +91,15 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("workers/{id}")]
+        [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetWorkerById(Guid id)
         {
             try
             {
+                // Workers can only view their own profile
+                if (User.IsInRole(UserRole.Worker.ToString()) && id.ToString() != User.FindFirst("WorkerId")?.Value)
+                    return Forbid("Workers can only view their own profile.");
+
                 var worker = await _workersRepository.GetWorkerByIdAsync(id);
                 if (worker == null)
                 {
@@ -93,6 +119,7 @@ namespace WorkersManagement.API.Controllers
 
 
         [HttpPut("update-worker/{id}")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UpdateWorkerAsync(Guid id, [FromBody] UpdateWorkersDto request)
         {
             try
@@ -100,6 +127,22 @@ namespace WorkersManagement.API.Controllers
                 var worker = await _workersRepository.GetWorkerByIdAsync(id);
                 if (worker == null)
                     return NotFound("Worker not found.");
+
+                // Additional check for SubTeamLead and HOD
+                if (User.IsInRole(UserRole.SubTeamLead.ToString()) || User.IsInRole(UserRole.HOD.ToString()))
+                {
+                    var departments = await _departmentRepository.GetDepartmentByNameAsync(request.DepartmentName);
+                    if (departments == null)
+                        return BadRequest("Specified department does not exist.");
+
+                    var userDepartmentId = User.FindFirst("DepartmentId")?.Value;
+                    var userTeamId = User.FindFirst("TeamId")?.Value;
+
+                    if (User.IsInRole(UserRole.SubTeamLead.ToString()) && departments.TeamId.ToString() != userTeamId)
+                        return Forbid("SubTeamLeads can only update workers in their own subteam's departments.");
+                    if (User.IsInRole(UserRole.HOD.ToString()) && departments.Id.ToString() != userDepartmentId)
+                        return Forbid("HODs can only update workers in their own department.");
+                }
 
                 // Lookup department by name
                 var department = await _departmentRepository.GetDepartmentByNameAsync(request.DepartmentName);

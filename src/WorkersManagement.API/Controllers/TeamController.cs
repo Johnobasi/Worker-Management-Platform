@@ -1,12 +1,15 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class TeamController : ControllerBase
     {
         private readonly ITeamRepository _teamRepository;
@@ -22,6 +25,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("create-team")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> CreateTeam([FromBody] CreateTeamDto request)
         {
             try
@@ -46,6 +50,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("get-teams")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> GetTeamsAsync()
         {
             try
@@ -68,6 +73,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("get-teams/{teamName}")]
+        [Authorize(Policy = "SubTeamLead")]
         public async Task<IActionResult> GetTeamByIdAsync(string teamName)
         {
             try
@@ -75,6 +81,10 @@ namespace WorkersManagement.API.Controllers
                 var team = await _teamRepository.GetTeamByNameAsync(teamName);
                 if (team == null)
                     return NotFound($"Team with Name '{teamName}' not found.");
+
+                // SubTeamLeads can only view their own team
+                if (User.IsInRole(UserRole.SubTeamLead.ToString()) && team.Id.ToString() != User.FindFirst("TeamId")?.Value)
+                    return Forbid("SubTeamLeads can only view their own team.");
 
                 return Ok(team);
             }
@@ -86,6 +96,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPut("update-team/{id}")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UpdateTeamAsync(Guid id, [FromBody] UpdateTeamDto updatedTeam)
         {
             try
@@ -107,6 +118,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpDelete("delete-team/{id}")]
+        [Authorize(Policy = "SuperAdmin")]
         public async Task<IActionResult> DeleteTeamAsync(Guid id)
         {
             try

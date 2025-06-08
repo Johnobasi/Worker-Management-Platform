@@ -25,6 +25,8 @@ namespace WorkersManagement.Core
             services.AddScoped<IHabitRepository, HabitRepository>();
 
             services.AddScoped<IWorkersAuthRepository, WorkerAuthRepository>();
+            services.AddScoped<IHabitCompletionRepository, HabitCompletionRepository>();
+            services.AddScoped<ISubTeamRepository, SubTeamRepository>();
 
 
             services.AddHostedService<SundayRewardProcessor>();

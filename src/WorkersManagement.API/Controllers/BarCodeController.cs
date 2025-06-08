@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Domain.Interfaces;
 
 namespace WorkersManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class BarCodeController : ControllerBase
     {
         private readonly IBarcodeRepository _barcodeRepository;
@@ -16,6 +18,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("generate-download-barcode/{workerId}")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> DownloadWorkerBarcode(Guid workerId)
         {
             try
@@ -32,6 +35,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPut("assign-worker-barcode")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> AssignUserToQRCode([FromQuery] Guid qrCodeId, [FromQuery] Guid workerId)
         {
             try
@@ -53,6 +57,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpDelete("disable-worker-barcode/{workerId}")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> DisableWorkerQRCodes(Guid workerId)
         {
             try
@@ -69,6 +74,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("get-worker-barcode/{qrCodeId}")]
+        [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetById(Guid qrCodeId)
         {
             var qrCode = await _barcodeRepository.GetBarCodeByIdAsync(qrCodeId);

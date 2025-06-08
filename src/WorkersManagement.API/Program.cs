@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using System.Text.Json.Serialization;
 using WorkersManagement.Core;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Enumerations;
 namespace WorkersManagement.API
 {
     public class Program
@@ -27,6 +31,54 @@ namespace WorkersManagement.API
                  options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
                  options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
              });
+
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                    ValidAudience = builder.Configuration["Jwt:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder!.Configuration["Jwt:Key"]))
+                };
+            });
+
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("SuperAdmin", policy => policy.RequireRole(UserRole.SuperAdmin.ToString()));
+                options.AddPolicy("Admin", policy => policy.RequireRole(
+                    UserRole.Admin.ToString(),
+                    UserRole.SuperAdmin.ToString()));
+                options.AddPolicy("SubTeamLead", policy => policy.RequireRole(
+                    UserRole.SubTeamLead.ToString(),
+                    UserRole.Admin.ToString(),
+                    UserRole.SuperAdmin.ToString()));
+                options.AddPolicy("HOD", policy => policy.RequireRole(
+                    UserRole.HOD.ToString(),
+                    UserRole.SubTeamLead.ToString(),
+                    UserRole.Admin.ToString(),
+                    UserRole.SuperAdmin.ToString()));
+                options.AddPolicy("Worker", policy => policy.RequireRole(
+                    UserRole.Worker.ToString(),
+                    UserRole.HOD.ToString(),
+                    UserRole.SubTeamLead.ToString(),
+                    UserRole.Admin.ToString(),
+                    UserRole.SuperAdmin.ToString()));
+
+                // Department-specific policy for HODs
+                options.AddPolicy("DepartmentHOD", policy =>
+                    policy.RequireRole(UserRole.HOD.ToString())
+                          .RequireClaim("DepartmentId"));
+            });
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
            
@@ -75,10 +127,8 @@ namespace WorkersManagement.API
             app.UseStaticFiles();
             app.UseCors();
             app.UseHttpsRedirection();
-
+            app.UseAuthentication();
             app.UseAuthorization();
-
-
             app.MapControllers();
 
             app.Run();

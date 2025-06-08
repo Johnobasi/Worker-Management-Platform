@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure.Enumerations;
@@ -7,6 +8,7 @@ namespace WorkersManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ReportController : ControllerBase
     {
         private readonly IHabitRepository _habitRepository;
@@ -18,6 +20,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("worker-activity-summary")]
+        [Authorize(Policy = "HOD")]
         public async Task<IActionResult> GetWorkerActivitySummary(
               [FromQuery] bool isAdmin,
               [FromQuery] DateTime? startDate = null,
@@ -83,6 +86,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("export-attendance")]
+        [Authorize(Policy = "HOD")]
         public async Task<IActionResult> ExportAttendanceReport(
          [FromQuery] bool isAdmin,
          [FromQuery] DateTime? startDate = null,
@@ -149,8 +153,8 @@ namespace WorkersManagement.API.Controllers
             return File(Encoding.UTF8.GetBytes(combined), "text/csv", $"attendance_report_{DateTime.UtcNow:yyyyMMdd}.csv");
         }
 
-
         [HttpGet("export-summary")]
+        [Authorize(Policy = "HOD")]
         public async Task<IActionResult> ExportWorkerSummaryReport(
           [FromQuery] bool isAdmin,
           [FromQuery] DateTime? startDate = null,
@@ -186,7 +190,6 @@ namespace WorkersManagement.API.Controllers
             var combined = $"Department Summary\n{deptCsv}\n\nTeam Summary\n{teamCsv}";
             return File(Encoding.UTF8.GetBytes(combined), "text/csv", $"worker_summary_{DateTime.UtcNow:yyyyMMdd}.csv");
         }
-
 
         #region reports helpers
         private string GenerateCsv<T>(IEnumerable<T> data)

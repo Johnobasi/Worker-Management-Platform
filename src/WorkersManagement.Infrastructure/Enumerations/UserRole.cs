@@ -2,8 +2,10 @@
 {
     public enum UserRole
     {
-        Worker,
-        NonWorker,
-        Admin
+        SuperAdmin,
+        Admin,
+        SubTeamLead,
+        HOD,
+        Worker
     }
 }
