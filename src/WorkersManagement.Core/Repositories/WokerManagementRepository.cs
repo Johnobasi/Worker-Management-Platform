@@ -156,6 +156,7 @@ namespace WorkersManagement.Core.Repositories
             try
             {
                 return await _context.Workers
+                    .Include(d => d.Department)
                         .Include(w => w.Habits)
                             .ThenInclude(d => d.Completions)
                                  .FirstOrDefaultAsync(w => w.Id == id);

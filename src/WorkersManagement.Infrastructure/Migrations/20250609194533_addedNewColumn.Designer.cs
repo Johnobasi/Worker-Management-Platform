@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WorkersManagement.Infrastructure;
 
@@ -11,9 +12,11 @@ using WorkersManagement.Infrastructure;
 namespace WorkersManagement.Infrastructure.Migrations
 {
     [DbContext(typeof(WorkerDbContext))]
-    partial class WorkerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250609194533_addedNewColumn")]
+    partial class addedNewColumn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -112,24 +115,16 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.Property<DateTime>("CompletedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<Guid>("HabitId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("bit");
-
                     b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("WorkerId")
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("WorkerId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -394,9 +389,7 @@ namespace WorkersManagement.Infrastructure.Migrations
 
                     b.HasOne("WorkersManagement.Infrastructure.Worker", "Worker")
                         .WithMany("HabitCompletions")
-                        .HasForeignKey("WorkerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("WorkerId");
 
                     b.Navigation("Habit");
 

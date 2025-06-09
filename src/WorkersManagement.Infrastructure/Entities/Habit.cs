@@ -8,7 +8,7 @@ namespace WorkersManagement.Infrastructure
         public Guid Id { get; set; }
         public Guid? WorkerId { get; set; }
         public HabitType Type { get;  set; }
-        public DateTime CompletedAt { get;  set; } = DateTime.UtcNow;
+        public DateTime CompletedAt { get;  set; }
         public string Notes { get;  set; }
 
         public Worker Worker { get;  set; }

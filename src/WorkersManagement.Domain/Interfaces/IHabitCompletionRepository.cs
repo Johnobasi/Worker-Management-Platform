@@ -5,8 +5,8 @@ namespace WorkersManagement.Domain.Interfaces
 {
     public interface IHabitCompletionRepository
     {
-        Task AddCompletionAsync(HabitCompletion completion);
-        Task<List<HabitCompletion>> GetCompletionsByWorkerAndTypeAsync(Guid workerId, HabitType type);
+        Task<HabitCompletion> AddCompletionAsync(HabitCompletion completion);
         Task<int> GetCompletionCountByWorkerAndTypeAsync(Guid workerId, HabitType type, DateTime? date = null);
+        Task<List<HabitCompletion>> GetCompletionsByWorkerAndTypeAsync(Guid workerId, HabitType type);
     }
 }

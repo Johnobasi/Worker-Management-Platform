@@ -9,59 +9,54 @@ namespace WorkersManagement.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class DashboardController(IHabitRepository habitRepository, 
-        IWorkerManagementRepository workerRepository, IAttendanceRepository attendanceRepository,
-        IWorkerRewardRepository workerRewardRepository, ILogger<DashboardController> logger, IHabitCompletionRepository habitCompletionRepository) : ControllerBase
+    public class DashboardController(
+        IHabitRepository habitRepository,
+        IWorkerManagementRepository workerRepository,
+        IAttendanceRepository attendanceRepository,
+        IWorkerRewardRepository workerRewardRepository,
+        ILogger<DashboardController> logger,
+        IHabitCompletionRepository habitCompletionRepository) : ControllerBase
     {
-        private readonly IHabitRepository habitRepository = habitRepository;
-        private readonly IWorkerManagementRepository workerRepository = workerRepository;
-        private readonly IAttendanceRepository attendanceRepository = attendanceRepository;
-        private readonly IWorkerRewardRepository workerRewardRepository = workerRewardRepository;
-        private readonly ILogger<DashboardController> logger = logger;
+        private readonly IHabitRepository _habitRepository = habitRepository;
+        private readonly IWorkerManagementRepository _workerRepository = workerRepository;
+        private readonly IAttendanceRepository _attendanceRepository = attendanceRepository;
+        private readonly IWorkerRewardRepository _workerRewardRepository = workerRewardRepository;
+        private readonly ILogger<DashboardController> _logger = logger;
         private readonly IHabitCompletionRepository _habitCompletionRepository = habitCompletionRepository;
 
         [HttpGet("{workerId}")]
-        [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetDashboard(Guid workerId)
         {
             try
             {
-                // Workers can only view their own dashboard
-                if (User.IsInRole(UserRole.Worker.ToString()) && workerId.ToString() != User.FindFirst("WorkerId")?.Value)
+                var currentWorkerId = User.FindFirst("WorkerId")?.Value;
+                var isAdmin = User.IsInRole(UserRole.Admin.ToString());
+
+                // Only Admins can view other workers' dashboards
+                if (!isAdmin && workerId.ToString() != currentWorkerId)
                     return Forbid("Workers can only view their own dashboard.");
 
-                // Get today's date for daily counts
                 var today = DateTime.UtcNow.Date;
 
-                // Get completion counts for today
-                var givingCompletionsToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Giving, today);
-                var fastingCompletionsToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Fasting, today);
-                var bibleStudyCompletionsToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.BibleStudy, today);
-                var nlpPrayerCompletionsToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.NLPPrayer, today);
-                var devotionalCompletionsToday = await this._habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Devotionals, today);
+                // Daily completions
+                var givingToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Giving, today);
+                var fastingToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Fasting, today);
+                var bibleStudyToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.BibleStudy, today);
+                var nlpPrayerToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.NLPPrayer, today);
+                var devotionalToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Devotionals, today);
 
-                //var givingHabits = await this.habitRepository.GetHabitsByTypeAsync(workerId, HabitType.Giving) ?? new List<Habit>();
-                //var fastingHabits = await this.habitRepository.GetHabitsByTypeAsync(workerId, HabitType.Fasting) ?? new List<Habit>();
-                //var bibleStudyHabits = await this.habitRepository.GetHabitsByTypeAsync(workerId, HabitType.BibleStudy) ?? new List<Habit>();
-                //var nlpPrayerHabits = await this.habitRepository.GetHabitsByTypeAsync(workerId, HabitType.NLPPrayer) ?? new List<Habit>();
-                //var devotionalHabits = await this.habitRepository.GetHabitsByTypeAsync(workerId, HabitType.Devotionals) ?? new List<Habit>();
-                //var worker = await this.workerRepository.GetWorkerByIdAsync(workerId);
-                //var attendances = await this.attendanceRepository.GetWorkerAttendances(workerId, DateTime.Now.Date);
-                //var workerReward = await this.workerRewardRepository.GetRewardsForWorkerAsync(workerId);
+                // Total completions
+                var givingTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Giving);
+                var fastingTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Fasting);
+                var bibleStudyTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.BibleStudy);
+                var nlpPrayerTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.NLPPrayer);
+                var devotionalTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Devotionals);
 
-                // Get total completion counts
-                var givingCompletionsTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Giving);
-                var fastingCompletionsTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Fasting);
-                var bibleStudyCompletionsTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.BibleStudy);
-                var nlpPrayerCompletionsTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.NLPPrayer);
-                var devotionalCompletionsTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Devotionals);
+                var givingHabits = await _habitRepository.GetHabitsByTypeAsync(workerId, HabitType.Giving) ?? new List<Habit>();
+                var worker = await _workerRepository.GetWorkerByIdAsync(workerId);
+                var attendances = await _attendanceRepository.GetWorkerAttendances(workerId, today);
+                var workerReward = await _workerRewardRepository.GetRewardsForWorkerAsync(workerId);
 
-                var givingHabits = await this.habitRepository.GetHabitsByTypeAsync(workerId, HabitType.Giving) ?? new List<Habit>();
-                var worker = await this.workerRepository.GetWorkerByIdAsync(workerId);
-                var attendances = await this.attendanceRepository.GetWorkerAttendances(workerId, today);
-                var workerReward = await this.workerRewardRepository.GetRewardsForWorkerAsync(workerId);
-
-                // Calculate the total amount for Giving habits
                 var totalGivingAmount = givingHabits.Sum(h => h.Amount ?? 0);
 
                 var dashboard = new
@@ -69,10 +64,9 @@ namespace WorkersManagement.API.Controllers
                     Worker = new
                     {
                         worker.FirstName,
-                        Id = worker.Id,
                         worker.LastName,
-                        Department = worker.Department.Name,
-                        Team = worker.Department.Teams.Name
+                        worker.Id,
+                        Department = worker.Department?.Name
                     },
                     Attendance = attendances.Count(),
                     Reward = workerReward,
@@ -80,38 +74,39 @@ namespace WorkersManagement.API.Controllers
                     {
                         Giving = new
                         {
-                            Count = givingCompletionsToday,
-                            TotalCount = givingCompletionsTotal,
+                            TodayCount = givingToday,
+                            TotalCount = givingTotal,
                             TotalAmount = totalGivingAmount
                         },
                         Fasting = new
                         {
-                            TodayCount = fastingCompletionsToday,
-                            TotalCount = fastingCompletionsTotal
+                            TodayCount = fastingToday,
+                            TotalCount = fastingTotal
                         },
                         BibleStudy = new
                         {
-                            TodayCount = bibleStudyCompletionsToday,
-                            TotalCount = bibleStudyCompletionsTotal
+                            TodayCount = bibleStudyToday,
+                            TotalCount = bibleStudyTotal
                         },
                         NLPPrayer = new
                         {
-                            TodayCount = nlpPrayerCompletionsToday,
-                            TotalCount = nlpPrayerCompletionsTotal
+                            TodayCount = nlpPrayerToday,
+                            TotalCount = nlpPrayerTotal
                         },
                         Devotionals = new
                         {
-                            TodayCount = devotionalCompletionsToday,
-                            TotalCount = devotionalCompletionsTotal
+                            TodayCount = devotionalToday,
+                            TotalCount = devotionalTotal
                         }
                     }
                 };
+
                 return Ok(dashboard);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error occurred while retrieving all workers habit.");
-                return StatusCode(500, "An error occurred while retrieving the workers habit summary.");
+                _logger.LogError(ex, "Error occurred while retrieving dashboard.");
+                return StatusCode(500, "An error occurred while retrieving the dashboard.");
             }
         }
     }

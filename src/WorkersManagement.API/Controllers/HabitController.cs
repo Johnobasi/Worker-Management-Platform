@@ -38,7 +38,7 @@ namespace WorkersManagement.API.Controllers
                 {
                     Type = request.Type,
                     Notes = request.Notes,
-                    Amount = request.Amount
+                    Amount = request.Amount,
                 };
 
                 await _habitService.AddHabitAsync(habit);
@@ -121,38 +121,40 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
-        [HttpPost("mark-completion")]
-        [Authorize(Policy = "Worker")]
-        public async Task<IActionResult> MarkHabitCompletion([FromBody] MarkHabitCompletionDto request)
+        [HttpPost("mark-habit/{workerId}")]
+        public async Task<IActionResult> MarkHabitAsCompleted(Guid workerId, [FromBody] MarkHabitCompletionDto dto)
         {
             try
             {
-                var workerId = Guid.Parse(User.FindFirst("WorkerId")?.Value!);
+                var currentWorkerId = User.FindFirst("WorkerId")?.Value;
+                var isAdmin = User.IsInRole(UserRole.Admin.ToString());
+
+                if (!isAdmin && workerId.ToString() != currentWorkerId)
+                    return Forbid("Workers can only mark their own habits.");
 
                 var completion = new HabitCompletion
                 {
-                    Id = Guid.NewGuid(),
-                    HabitId = request.HabitId,
-                    Type = request.Type,
-                    CompletedAt = request.CompletionDate ?? DateTime.UtcNow
+                    HabitId = dto.HabitId,
+                    WorkerId = workerId,
+                    CompletedAt = DateTime.UtcNow,
+                    IsCompleted = dto.IsCompleted
                 };
 
-                await _habitCompletionRepository.AddCompletionAsync(completion);
-                return Ok("Habit completion recorded successfully.");
+                var result = await _habitCompletionRepository.AddCompletionAsync(completion);
+                return Ok(new { Message = $"Habit marked as {(dto.IsCompleted ? "completed" : "incomplete")}", CompletionId = result.Id });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while marking habit completion");
-                return StatusCode(500, "An error occurred while recording the habit completion.");
+                _logger.LogError(ex, $"Error marking habit as completed for worker {workerId}");
+                return StatusCode(500, "An error occurred while marking the habit as completed.");
             }
         }
-
-        public record MarkHabitCompletionDto
-        {
-            public Guid HabitId { get; init; }
-            public HabitType Type { get; init; }
-            public DateTime? CompletionDate { get; init; }
-        }
-
     }
+    public record MarkHabitCompletionDto
+        {
+        public Guid HabitId { get; init; }
+        public bool IsCompleted { get; init; }
+    }
+
+    
 }

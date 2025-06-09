@@ -17,11 +17,6 @@ namespace WorkersManagement.Core.Repositories
         {
             _context.Departments.Add(department);
             await _context.SaveChangesAsync();
-            //return new DepartmentDto
-            //{
-            //    Name = department.Name,
-            //    TeamName = department.Teams.Name
-            //};
 
             string containerName = department.Subteams != null
             ? department.Subteams.Name

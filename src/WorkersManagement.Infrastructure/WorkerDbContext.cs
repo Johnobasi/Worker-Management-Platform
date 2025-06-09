@@ -22,28 +22,69 @@ namespace WorkersManagement.Infrastructure
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(WorkerDbContext).Assembly);
 
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<HabitCompletion>()
+                .HasKey(hc => hc.Id);
+
+            modelBuilder.Entity<HabitCompletion>()
+                .Property(hc => hc.IsCompleted)
+                .IsRequired();
+
+            modelBuilder.Entity<HabitCompletion>()
+                .Property(hc => hc.WorkerId)
+                .IsRequired();
+
+            modelBuilder.Entity<HabitCompletion>()
+                .Property(hc => hc.HabitId)
+                .IsRequired();
+
+            modelBuilder.Entity<HabitCompletion>()
+                .Property(hc => hc.Type)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => (HabitType)Enum.Parse(typeof(HabitType), v))
+                .IsRequired();
+
+            modelBuilder.Entity<HabitCompletion>()
+                .Property(hc => hc.Notes)
+                .HasMaxLength(500);
+
+            modelBuilder.Entity<HabitCompletion>()
+                .HasOne(hc => hc.Habit)
+                .WithMany(h => h.Completions)
+                .HasForeignKey(hc => hc.HabitId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<HabitCompletion>()
+                .HasOne(hc => hc.Worker)
+                .WithMany(w => w.HabitCompletions)
+                .HasForeignKey(hc => hc.WorkerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Habit>()
+                .Property(h => h.Type)
+                .HasConversion(
+                    v => v.ToString(),
+                    v => (HabitType)Enum.Parse(typeof(HabitType), v));
+
             modelBuilder.Entity<Worker>()
                 .Property(w => w.Role)
                 .HasConversion(
-                    v => v.ToString(), // Convert enum to string
+                    v => v.ToString(),
                     v => Enum.Parse<UserRole>(v));
-           
-            modelBuilder.Entity<Worker>()
-            .HasMany(w => w.Habits)
-            .WithOne(h => h.Worker)
-            .HasForeignKey(h => h.WorkerId)
-            .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Habit>()
-                .HasMany(h => h.Completions)
-                .WithOne(c => c.Habit)
-                .HasForeignKey(c => c.HabitId)
-                .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<Worker>()
-            .HasOne(w => w.Department)
-            .WithMany(d => d.Workers)
-            .HasForeignKey(w => w.DepartmentId)
-            .IsRequired(false);
-            }
+                .HasMany(w => w.Habits)
+                .WithOne(h => h.Worker)
+                .HasForeignKey(h => h.WorkerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Worker>()
+                .HasOne(w => w.Department)
+                .WithMany(d => d.Workers)
+                .HasForeignKey(w => w.DepartmentId)
+                .IsRequired(false);
+        }
     }
 }

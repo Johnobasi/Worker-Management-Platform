@@ -45,7 +45,6 @@ namespace WorkersManagement.Core.Repositories
             {
                 _logger.LogError(ex.Message);
             }
-
         }
 
         public async Task<IEnumerable<Devotional>> GetAllDevotionalsAsync()
@@ -59,7 +58,6 @@ namespace WorkersManagement.Core.Repositories
                 _logger.LogError(ex.Message);
                 return null!;
             }
-
         }
 
         public async Task<Devotional?> GetDevotionalByIdAsync(Guid id)
@@ -74,7 +72,6 @@ namespace WorkersManagement.Core.Repositories
                 _logger.LogError(ex.Message);
                 return null!;
             }
-
         }
     }
 }

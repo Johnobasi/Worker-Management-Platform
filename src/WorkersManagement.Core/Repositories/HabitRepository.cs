@@ -25,13 +25,18 @@ namespace WorkersManagement.Core.Repositories
 
         }
 
+        public async Task<int> GetDailyCompletionCountAsync(Guid workerId, HabitType type, DateTime date)
+        {
+            return await _context.Habits
+                .CountAsync(h => h.WorkerId == workerId && h.Type == type && h.CompletedAt! == date.Date);
+        }
         public async Task<IEnumerable<Habit>> GetHabitsByTypeAsync(Guid workerId, HabitType type)
         {
             _logger.LogInformation($"Getting habits of type {type} for worker with id {workerId}");
             try
             {
                 return await _context.Habits
-                    .Where(h => h.WorkerId == workerId || h.Type == type)
+                    .Where(h => h.WorkerId == workerId && h.Type == type)
                      .ToListAsync();
             }
             catch (Exception ex)
@@ -54,7 +59,7 @@ namespace WorkersManagement.Core.Repositories
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
-                return null!;
+                return Enumerable.Empty<Habit>();
             }
 
         }
