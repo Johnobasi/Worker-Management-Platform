@@ -12,8 +12,8 @@ using WorkersManagement.Infrastructure;
 namespace WorkersManagement.Infrastructure.Migrations
 {
     [DbContext(typeof(WorkerDbContext))]
-    [Migration("20250526111000_addCleanupUserEntity")]
-    partial class addCleanupUserEntity
+    [Migration("20250609084338_modifiedWorker")]
+    partial class modifiedWorker
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -74,10 +74,15 @@ namespace WorkersManagement.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid?>("SubteamId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("TeamId")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SubteamId");
 
                     b.HasIndex("TeamId");
 
@@ -99,6 +104,36 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Devotionals");
+                });
+
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.HabitCompletion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("HabitId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("WorkerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HabitId");
+
+                    b.HasIndex("WorkerId");
+
+                    b.ToTable("HabitCompletions");
                 });
 
             modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.QRCode", b =>
@@ -127,6 +162,28 @@ namespace WorkersManagement.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("QRCodes");
+                });
+
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.SubTeam", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TeamId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeamId");
+
+                    b.ToTable("SubTeams");
                 });
 
             modelBuilder.Entity("WorkersManagement.Infrastructure.Habit", b =>
@@ -214,7 +271,7 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.Property<int>("ConsecutiveSundayCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("DepartmentId")
+                    b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Email")
@@ -223,20 +280,36 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.Property<string>("FirstName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("LastLogin")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("LastName")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("LastRewardDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PasswordResetToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("PasswordResetTokenExpiration")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("QRCode")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("int");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("Status")
                         .HasColumnType("bit");
+
+                    b.Property<string>("WorkerNumber")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -294,13 +367,36 @@ namespace WorkersManagement.Infrastructure.Migrations
 
             modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.Department", b =>
                 {
+                    b.HasOne("WorkersManagement.Infrastructure.Entities.SubTeam", "Subteam")
+                        .WithMany("Departments")
+                        .HasForeignKey("SubteamId");
+
                     b.HasOne("WorkersManagement.Infrastructure.Team", "Teams")
                         .WithMany("Departments")
                         .HasForeignKey("TeamId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Subteam");
+
                     b.Navigation("Teams");
+                });
+
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.HabitCompletion", b =>
+                {
+                    b.HasOne("WorkersManagement.Infrastructure.Habit", "Habit")
+                        .WithMany("Completions")
+                        .HasForeignKey("HabitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WorkersManagement.Infrastructure.Worker", "Worker")
+                        .WithMany("HabitCompletions")
+                        .HasForeignKey("WorkerId");
+
+                    b.Navigation("Habit");
+
+                    b.Navigation("Worker");
                 });
 
             modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.QRCode", b =>
@@ -310,6 +406,17 @@ namespace WorkersManagement.Infrastructure.Migrations
                         .HasForeignKey("WorkersManagement.Infrastructure.Entities.QRCode", "WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.SubTeam", b =>
+                {
+                    b.HasOne("WorkersManagement.Infrastructure.Team", "Team")
+                        .WithMany("Subteams")
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Team");
                 });
 
             modelBuilder.Entity("WorkersManagement.Infrastructure.Habit", b =>
@@ -326,9 +433,7 @@ namespace WorkersManagement.Infrastructure.Migrations
                 {
                     b.HasOne("WorkersManagement.Infrastructure.Entities.Department", "Department")
                         .WithMany("Workers")
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("DepartmentId");
 
                     b.Navigation("Department");
                 });
@@ -357,6 +462,16 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.Navigation("Workers");
                 });
 
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.SubTeam", b =>
+                {
+                    b.Navigation("Departments");
+                });
+
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Habit", b =>
+                {
+                    b.Navigation("Completions");
+                });
+
             modelBuilder.Entity("WorkersManagement.Infrastructure.Reward", b =>
                 {
                     b.Navigation("WorkerRewards");
@@ -365,11 +480,15 @@ namespace WorkersManagement.Infrastructure.Migrations
             modelBuilder.Entity("WorkersManagement.Infrastructure.Team", b =>
                 {
                     b.Navigation("Departments");
+
+                    b.Navigation("Subteams");
                 });
 
             modelBuilder.Entity("WorkersManagement.Infrastructure.Worker", b =>
                 {
                     b.Navigation("Attendances");
+
+                    b.Navigation("HabitCompletions");
 
                     b.Navigation("Habits");
 

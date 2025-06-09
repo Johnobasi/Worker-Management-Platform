@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Text.Json.Serialization;
 using WorkersManagement.Core;
@@ -56,6 +57,7 @@ namespace WorkersManagement.API
                 options.AddPolicy("SuperAdmin", policy => policy.RequireRole(UserRole.SuperAdmin.ToString()));
                 options.AddPolicy("Admin", policy => policy.RequireRole(
                     UserRole.Admin.ToString(),
+                    UserRole.SubTeamLead.ToString(),
                     UserRole.SuperAdmin.ToString()));
                 options.AddPolicy("SubTeamLead", policy => policy.RequireRole(
                     UserRole.SubTeamLead.ToString(),
@@ -84,6 +86,29 @@ namespace WorkersManagement.API
            
             builder.Services.AddSwaggerGen(options =>
             {
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.ApiKey,
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Enter 'Bearer' followed by a space and your token."
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
                 options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
                 {
                     Title = "Workers Attendance API",

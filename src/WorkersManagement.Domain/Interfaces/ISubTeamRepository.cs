@@ -10,7 +10,7 @@ namespace WorkersManagement.Domain.Interfaces
         Task<IEnumerable<SubTeamDto>> GetAllSubTeamsAsync();
         Task<SubTeamDto> UpdateSubTeamAsync(Guid id, SubTeamDto subTeamDto);
         Task<bool> DeleteSubTeamAsync(Guid id);
-        Task<IEnumerable<SubTeamDto>> GetSubTeamsByTeamNameAsync(string teamName);
+        Task<SubTeam> GetSubTeamsByTeamNameAsync(string teamName);
     }
 
 }

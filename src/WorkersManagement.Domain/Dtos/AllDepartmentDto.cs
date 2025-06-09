@@ -6,9 +6,9 @@
         public string Name { get; set; }
         public string Description { get; set; }
         public string TeamName { get; set; }
+        public string SubTeamName { get; set; }
 
-        // You can customize user details here
-        public List<string> Users { get; set; } = new();
+        public List<string> Workers { get; set; } = new();
     }
 
 }

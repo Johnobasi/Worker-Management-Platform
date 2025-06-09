@@ -27,7 +27,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("upload-devotionals")]
-        [Authorize(Policy = "SuperAdmin")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UploadDevotional([FromForm] UploadDevotionalRequest request)
         {
             if (request.File == null || request.File.Length == 0)
@@ -128,7 +128,7 @@ namespace WorkersManagement.API.Controllers
 
 
         [HttpDelete("delete-devotional/{id}")]
-        [Authorize(Policy = "SuperAdmin")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> DeleteDevotional(Guid id)
         {
             try

@@ -23,10 +23,12 @@ namespace WorkersManagement.Infrastructure.Configurations
                 .HasForeignKey(d => d.TeamId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasMany(d => d.Workers)
-                .WithOne(w => w.Department)
-                .HasForeignKey(w => w.DepartmentId)
-                .OnDelete(DeleteBehavior.Cascade);
+            //builder.HasMany(d => d.Workers)
+            //    .WithOne(w => w.Department)
+            //    .HasForeignKey(w => w.DepartmentId)
+            //    .OnDelete(DeleteBehavior.Cascade);
+
+
         }
     }
 }

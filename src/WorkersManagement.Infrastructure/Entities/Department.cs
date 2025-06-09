@@ -7,7 +7,8 @@
         public string Name { get; set; }
         public string Description { get; set; }
         public Team Teams { get; set; }
-        public SubTeam Subteam { get; set; }
+        public SubTeam Subteams { get; set; }
         public ICollection<Worker>  Workers { get; set; }
+        public Guid? SubTeamId { get; set; }
     }
 }

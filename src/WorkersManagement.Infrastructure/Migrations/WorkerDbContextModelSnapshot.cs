@@ -103,6 +103,36 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.ToTable("Devotionals");
                 });
 
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.HabitCompletion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("HabitId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("WorkerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HabitId");
+
+                    b.HasIndex("WorkerId");
+
+                    b.ToTable("HabitCompletions");
+                });
+
             modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.QRCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -151,33 +181,6 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.HasIndex("TeamId");
 
                     b.ToTable("SubTeams");
-                });
-
-            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.UpdateHabit", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("HabitId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("WorkerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HabitId");
-
-                    b.HasIndex("WorkerId");
-
-                    b.ToTable("HabitUpdates");
                 });
 
             modelBuilder.Entity("WorkersManagement.Infrastructure.Habit", b =>
@@ -262,10 +265,7 @@ namespace WorkersManagement.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ConsecutiveSundayCount")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("DepartmentId")
+                    b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Email")
@@ -376,6 +376,23 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.Navigation("Teams");
                 });
 
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.HabitCompletion", b =>
+                {
+                    b.HasOne("WorkersManagement.Infrastructure.Habit", "Habit")
+                        .WithMany("Completions")
+                        .HasForeignKey("HabitId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WorkersManagement.Infrastructure.Worker", "Worker")
+                        .WithMany("HabitCompletions")
+                        .HasForeignKey("WorkerId");
+
+                    b.Navigation("Habit");
+
+                    b.Navigation("Worker");
+                });
+
             modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.QRCode", b =>
                 {
                     b.HasOne("WorkersManagement.Infrastructure.Worker", null)
@@ -396,25 +413,6 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.Navigation("Team");
                 });
 
-            modelBuilder.Entity("WorkersManagement.Infrastructure.Entities.UpdateHabit", b =>
-                {
-                    b.HasOne("WorkersManagement.Infrastructure.Habit", "Habit")
-                        .WithMany()
-                        .HasForeignKey("HabitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("WorkersManagement.Infrastructure.Worker", "Worker")
-                        .WithMany()
-                        .HasForeignKey("WorkerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Habit");
-
-                    b.Navigation("Worker");
-                });
-
             modelBuilder.Entity("WorkersManagement.Infrastructure.Habit", b =>
                 {
                     b.HasOne("WorkersManagement.Infrastructure.Worker", "Worker")
@@ -429,9 +427,7 @@ namespace WorkersManagement.Infrastructure.Migrations
                 {
                     b.HasOne("WorkersManagement.Infrastructure.Entities.Department", "Department")
                         .WithMany("Workers")
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("DepartmentId");
 
                     b.Navigation("Department");
                 });
@@ -465,6 +461,11 @@ namespace WorkersManagement.Infrastructure.Migrations
                     b.Navigation("Departments");
                 });
 
+            modelBuilder.Entity("WorkersManagement.Infrastructure.Habit", b =>
+                {
+                    b.Navigation("Completions");
+                });
+
             modelBuilder.Entity("WorkersManagement.Infrastructure.Reward", b =>
                 {
                     b.Navigation("WorkerRewards");
@@ -480,6 +481,8 @@ namespace WorkersManagement.Infrastructure.Migrations
             modelBuilder.Entity("WorkersManagement.Infrastructure.Worker", b =>
                 {
                     b.Navigation("Attendances");
+
+                    b.Navigation("HabitCompletions");
 
                     b.Navigation("Habits");
 

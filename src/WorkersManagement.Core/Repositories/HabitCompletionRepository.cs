@@ -14,30 +14,48 @@ namespace WorkersManagement.Core.Repositories
         {
             _workerDbContext = workerDbContext;
         }
-        public async Task AddCompletionAsync(UpdateHabit completion)
+        public async Task AddCompletionAsync(HabitCompletion completion)
         {
-            await _workerDbContext.HabitUpdates.AddAsync(completion);
+            // Validate that the habit exists and belongs to the worker
+            var habit = await _workerDbContext.Habits
+                .FirstOrDefaultAsync(h => h.Id == completion.HabitId);
+
+            if (habit == null)
+            {
+                throw new InvalidOperationException("Habit does not exist.");
+            }
+
+            await _workerDbContext.HabitCompletions.AddAsync(completion);
             await _workerDbContext.SaveChangesAsync();
         }
 
         public async Task<int> GetCompletionCountByWorkerAndTypeAsync(Guid workerId, HabitType type, DateTime? date = null)
         {
-            var query = _workerDbContext.HabitUpdates
-                 .Where(c => c.WorkerId == workerId && c.Type == type);
+            var query = _workerDbContext.HabitCompletions
+                .Join(_workerDbContext.Habits,
+                    completion => completion.HabitId,
+                    habit => habit.Id,
+                    (completion, habit) => new { Completion = completion, Habit = habit })
+                .Where(joined => joined.Habit.WorkerId == workerId && joined.Habit.Type == type);
 
             if (date.HasValue)
             {
-                query = query.Where(c => c.CompletedAt.Date == date.Value.Date);
+                query = query.Where(joined => joined.Completion.CompletedAt.Date == date.Value.Date);
             }
 
             return await query.CountAsync();
         }
 
-        public async Task<List<UpdateHabit>> GetCompletionsByWorkerAndTypeAsync(Guid workerId, HabitType type)
+        public async Task<List<HabitCompletion>> GetCompletionsByWorkerAndTypeAsync(Guid workerId, HabitType type)
         {
-            return await _workerDbContext.HabitUpdates
-                 .Where(c => c.WorkerId == workerId && c.Type == type)
-                 .ToListAsync();
+            return await _workerDbContext.HabitCompletions
+                  .Join(_workerDbContext.Habits,
+                      completion => completion.HabitId,
+                      habit => habit.Id,
+                      (completion, habit) => new { Completion = completion, Habit = habit })
+                  .Where(joined => joined.Habit.WorkerId == workerId && joined.Habit.Type == type)
+                  .Select(joined => joined.Completion)
+                  .ToListAsync();
         }
     }
 }

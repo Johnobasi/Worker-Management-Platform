@@ -10,7 +10,7 @@ namespace WorkersManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-   // [Authorize]
+    [Authorize]
     public class AdminController : ControllerBase
     {
         private readonly IWorkerManagementRepository _workersRepository;
@@ -24,7 +24,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("create-worker")]
-       // [Authorize(Policy = "Admin")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> CreateWorker([FromBody] CreateNewWorkerDto dto)
         {
             try
@@ -43,7 +43,7 @@ namespace WorkersManagement.API.Controllers
                     if (User.IsInRole(UserRole.HOD.ToString()) && department.Id.ToString() != userDepartmentId)
                         return Forbid("HODs can only add workers to their own department.");
                 }
-                    var worker = await _workersRepository.CreateWorkerAsync(dto);
+                var worker = await _workersRepository.CreateWorkerAsync(dto);
                 _logger.LogInformation("Worker created successfully with email: {Email}", dto.Email);
                 return CreatedAtAction(nameof(GetWorkerById), new { id = worker.Id }, worker);
             }

@@ -28,14 +28,14 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("add-new-subteam")]
-        [Authorize(Policy ="SubTeamLead")]
+      [Authorize(Policy ="Admin")]
         public async Task<ActionResult<SubTeamDto>> CreateSubTeam([FromBody] CreateSubTeamDto subTeamCreateDto)
         {
             _logger.LogInformation("Creating new subteam with Team Name: {Name}", subTeamCreateDto?.Name);
             try
             {
                 // Check if user has the required role/permission
-                if (!User.IsInRole("SubTeamLead"))
+                if (!User.IsInRole(UserRole.Admin.ToString()))
                 {
                     _logger.LogWarning("User {UserId} attempted to create subteam without required permissions", User?.Identity?.Name);
                     return Unauthorized("You do not have the required role or permission to create a subteam.");
@@ -74,7 +74,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("get-subteam-by-Id/{id}")]
-        [Authorize(Policy ="SubTeamLead")]
+        [Authorize(Policy ="Admin")]
         public async Task<ActionResult<SubTeamDto>> GetSubTeam(Guid id)
         {
             _logger.LogInformation("Retrieving subteam with Id: {SubTeamId}", id);
@@ -205,12 +205,12 @@ namespace WorkersManagement.API.Controllers
                 }
 
                 var subTeams = await _subTeamService.GetSubTeamsByTeamNameAsync(teamName);
-                if (subTeams == null || !subTeams.Any())
+                if (subTeams == null )
                 {
                     _logger.LogWarning("No subteams found for team: {TeamName}", teamName);
                     return NotFound("No subteams found for the specified team.");
                 }
-                _logger.LogInformation("Retrieved {Count} subteams for team: {TeamName}", subTeams.Count(), teamName);
+                _logger.LogInformation("Retrieved {Count} subteams for team: {TeamName}", subTeams, teamName);
                 return Ok(subTeams);
             }
             catch (ArgumentException ex)

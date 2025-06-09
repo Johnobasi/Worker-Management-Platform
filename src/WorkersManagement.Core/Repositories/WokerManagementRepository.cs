@@ -19,14 +19,14 @@ namespace WorkersManagement.Core.Repositories
         private readonly IDepartmentRepository _departmentRepository = departmentRepository;
        private readonly IEmailService _emailService = emailService;
 
-        private static readonly Dictionary<string, string> TeamCodeMap = new()
+        private static readonly Dictionary<string, string> TeamCodeMap = new(StringComparer.OrdinalIgnoreCase)
         {
             { "Maturity", "MAR-" },
             { "Ministry", "MIN-" },
-            { "Membership", "MEM-" },
+            { "Membership","MEM-" },
             { "Program", "PROG-" },
             { "Kidzone", "KID-" },
-            { "General Service", "GEN-" },
+            { "General Service","GEN-" },
             { "Missions", "MISS-" }
         };
 
@@ -41,28 +41,30 @@ namespace WorkersManagement.Core.Repositories
                 throw new ArgumentException("Password is required.");
 
             Department? department = null;
-            string? teamCode = null;
 
-            if (dto.Role == UserRole.Worker)
+
+            if (string.IsNullOrWhiteSpace(dto.DepartmentName))
+                throw new ArgumentException("Department name is required for a Worker role.");
+
+            department = await _departmentRepository.GetDepartmentByNameAsync(dto.DepartmentName.Trim());
+
+            if (department == null)
+                throw new ArgumentException($"Department '{dto.DepartmentName}' does not exist.");
+
+            if (department.TeamId == Guid.Empty)
+                throw new ArgumentException($"Department '{dto.DepartmentName}' is not linked to any team.");
+
+            var team = await _context.Teams.FindAsync(department.TeamId);
+            if (team == null)
+                throw new ArgumentException("Team not found for department.");
+
+            if (!TeamCodeMap.TryGetValue(team.Name, out string? teamCode))
             {
-                if (string.IsNullOrWhiteSpace(dto.DepartmentName))
-                    throw new ArgumentException("Department name is required for a Worker role.");
-
-                department = await _departmentRepository.GetDepartmentByNameAsync(dto.DepartmentName.Trim());
-
-                if (department == null)
-                    throw new ArgumentException($"Department '{dto.DepartmentName}' does not exist.");
-
-                if (department.TeamId == Guid.Empty)
-                    throw new ArgumentException($"Department '{dto.DepartmentName}' is not linked to any team.");
-
-                var team = await _context.Teams.FindAsync(department.TeamId);
-                if (team == null)
-                    throw new ArgumentException("Team not found for department.");
-
-                if (!TeamCodeMap.TryGetValue(team.Name.Trim(), out teamCode))
-                    throw new ArgumentException($"Team code for '{team.Name}' not defined.");
+                _logger.LogError("Team code not found for team name: '{TeamName}'. Available team names: {AvailableTeams}",
+                    team.Name, string.Join(", ", TeamCodeMap.Keys));
+                throw new ArgumentException($"Team code for '{team.Name}' not defined.");
             }
+            
 
             try
             {
@@ -82,13 +84,19 @@ namespace WorkersManagement.Core.Repositories
                     Email = dto.Email,
                     FirstName = dto.FirstName,
                     LastName = dto.LastName,
-                    Role = UserRole.Worker,
+                    Role = dto.Role,
                     Department = department,
+                    DepartmentId = department?.Id, // Set foreign key
                     WorkerNumber = workerNumber,
                     PasswordHash = passwordHash,
                     LastLogin = null,
                     PasswordResetToken = resetToken,
-                    PasswordResetTokenExpiration = resetTokenExpiration
+                    PasswordResetTokenExpiration = resetTokenExpiration,
+                    Status = true,
+                    Attendances = new List<Attendance>(),
+                    Habits = new List<Habit>(),
+                    HabitCompletions = new List<HabitCompletion>(),
+                    Rewards = new List<WorkerReward>()
                 };
 
                 await _context.Workers.AddAsync(workerToAdd);
@@ -119,18 +127,14 @@ namespace WorkersManagement.Core.Repositories
         {
             try
             {
-                var user = await GetWorkerByIdAsync(id);
-                if (user != null)
-                {
-                    _context.Workers.Remove(user);
-                    await _context.SaveChangesAsync();
-                }
+                var worker = await GetWorkerByIdAsync(id) ?? throw new InvalidOperationException("Worker not found.");
+                _context.Workers.Remove(worker);
+                await _context.SaveChangesAsync();              
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
             }
-
         }
 
         public async Task<ICollection<Worker>> GetAllWorkersAsync()
@@ -152,8 +156,8 @@ namespace WorkersManagement.Core.Repositories
             try
             {
                 return await _context.Workers
-                        .Include(w => w.Department)
-                            .ThenInclude(d => d.Teams)
+                        .Include(w => w.Habits)
+                            .ThenInclude(d => d.Completions)
                                  .FirstOrDefaultAsync(w => w.Id == id);
             }
             catch (Exception ex)

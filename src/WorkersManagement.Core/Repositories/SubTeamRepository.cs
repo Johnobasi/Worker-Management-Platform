@@ -19,20 +19,8 @@ namespace WorkersManagement.Core.Repositories
 
         public async Task<CreateSubTeamDto> CreateSubTeamAsync(SubTeam subTeamDto)
         {
-            if (subTeamDto == null)
-                throw new ArgumentNullException(nameof(subTeamDto));
 
-            if (!await _dbContext.Teams.AnyAsync(t => t.Name == subTeamDto.Name))
-                throw new ArgumentException("Invalid TeamId. Team does not exist.");
-
-            var subTeam = new SubTeam
-            {
-
-                Name = subTeamDto.Name,
-                Description = subTeamDto.Description
-            };
-
-            _dbContext.SubTeams.Add(subTeam);
+            _dbContext.SubTeams.Add(subTeamDto);
             await _dbContext.SaveChangesAsync();
 
             return new CreateSubTeamDto
@@ -101,29 +89,16 @@ namespace WorkersManagement.Core.Repositories
             if (subTeam == null)
                 return false;
 
-            //if (await _dbContext.Departments.AnyAsync(d => d.Subteam.Id == id) ||
-            //    await _dbContext.Workers.AnyAsync(w => w.SubTeamId == id))
-            //    throw new InvalidOperationException("Cannot delete SubTeam with associated Departments or Workers.");
-
             _dbContext.SubTeams.Remove(subTeam);
             await _dbContext.SaveChangesAsync();
             return true;
         }
 
-        public async Task<IEnumerable<SubTeamDto>> GetSubTeamsByTeamNameAsync(string teamName)
+        public async Task<SubTeam> GetSubTeamsByTeamNameAsync(string teamName)
         {
-            if (!await _dbContext.Teams.AnyAsync(t => t.Name == teamName))
-                throw new ArgumentException("Invalid Team name. Team does not exist.");
-
             return await _dbContext.SubTeams
-                .AsNoTracking()
-                .Where(st => st.Name == teamName)
-                .Select(st => new SubTeamDto
-                {
-                    Name = st.Name,
-                    Description = st.Description
-                })
-                .ToListAsync();
+             .Include(st => st.Team)
+             .FirstOrDefaultAsync(st => st.Name == teamName);
         }
     }
 }

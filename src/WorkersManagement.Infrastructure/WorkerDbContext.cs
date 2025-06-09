@@ -15,7 +15,7 @@ namespace WorkersManagement.Infrastructure
         public DbSet<Attendance> Attendances { get; set; }
         public DbSet<QRCode> QRCodes { get; set; }
         public DbSet<Devotional> Devotionals { get; set; }
-        public DbSet<UpdateHabit> HabitUpdates { get; set; }
+        public DbSet<HabitCompletion> HabitCompletions { get; set; }
         public DbSet<SubTeam> SubTeams { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -27,7 +27,23 @@ namespace WorkersManagement.Infrastructure
                 .HasConversion(
                     v => v.ToString(), // Convert enum to string
                     v => Enum.Parse<UserRole>(v));
+           
+            modelBuilder.Entity<Worker>()
+            .HasMany(w => w.Habits)
+            .WithOne(h => h.Worker)
+            .HasForeignKey(h => h.WorkerId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        }
+            modelBuilder.Entity<Habit>()
+                .HasMany(h => h.Completions)
+                .WithOne(c => c.Habit)
+                .HasForeignKey(c => c.HabitId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Worker>()
+            .HasOne(w => w.Department)
+            .WithMany(d => d.Workers)
+            .HasForeignKey(w => w.DepartmentId)
+            .IsRequired(false);
+            }
     }
 }

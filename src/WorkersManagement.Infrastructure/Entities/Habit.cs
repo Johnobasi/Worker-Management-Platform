@@ -1,4 +1,5 @@
-﻿using WorkersManagement.Infrastructure.Enumerations;
+﻿using WorkersManagement.Infrastructure.Entities;
+using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Infrastructure
 {
@@ -12,5 +13,6 @@ namespace WorkersManagement.Infrastructure
 
         public Worker Worker { get;  set; }
         public decimal? Amount { get; set; } // Amount is optional and applies to 'Giving' type habits
+        public ICollection<HabitCompletion> Completions { get; set; } = new List<HabitCompletion>();
     }
 }

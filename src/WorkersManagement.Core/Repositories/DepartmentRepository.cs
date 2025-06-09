@@ -17,10 +17,20 @@ namespace WorkersManagement.Core.Repositories
         {
             _context.Departments.Add(department);
             await _context.SaveChangesAsync();
+            //return new DepartmentDto
+            //{
+            //    Name = department.Name,
+            //    TeamName = department.Teams.Name
+            //};
+
+            string containerName = department.Subteams != null
+            ? department.Subteams.Name
+            : department.Teams.Name;
+
             return new DepartmentDto
             {
                 Name = department.Name,
-                TeamName = department.Teams.Name
+                TeamName = containerName
             };
         }
 
@@ -66,6 +76,7 @@ namespace WorkersManagement.Core.Repositories
             return await _context.Departments
                     .Include(d => d.Workers)
                          .Include(d => d.Teams)
+                           .Include(x=>x.Subteams)
                              .ToListAsync();
         }
     }

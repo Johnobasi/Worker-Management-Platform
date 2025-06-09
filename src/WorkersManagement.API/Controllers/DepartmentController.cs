@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure.Entities;
@@ -15,11 +16,14 @@ namespace WorkersManagement.API.Controllers
         private readonly IDepartmentRepository _departmentRepository;
         private readonly ITeamRepository _teamRepository;
         private readonly ILogger<DepartmentController> _logger;
-        public DepartmentController(IDepartmentRepository departmentRepository, ITeamRepository teamRepository, ILogger<DepartmentController> logger)
+        private readonly ISubTeamRepository _subTeamRepository;
+        public DepartmentController(IDepartmentRepository departmentRepository, ITeamRepository teamRepository,
+            ILogger<DepartmentController> logger, ISubTeamRepository subTeamRepository)
         {
             _departmentRepository = departmentRepository;
             _teamRepository = teamRepository;
             _logger = logger;
+            _subTeamRepository = subTeamRepository;
         }
 
         [HttpGet("all-departments")]
@@ -28,6 +32,22 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                // Manual role check against UserRole enum
+                var userRoles = User.Claims
+                    .Where(c => c.Type == ClaimTypes.Role)
+                    .Select(c => c.Value)
+                    .ToList();
+
+                bool hasRequiredRole = userRoles.Any(role =>
+                    role == UserRole.Admin.ToString() ||
+                    role == UserRole.SuperAdmin.ToString());
+
+                if (!hasRequiredRole)
+                {
+                    _logger.LogWarning("User with roles {Roles} attempted to fetch department but lacks required role (Admin or SuperAdmin).", string.Join(", ", userRoles));
+                    return Forbid("User does not have the required role to fetch department data.");
+                }
+
                 var departments = await _departmentRepository.AllDepartmentsAsync();
 
                 var result = departments.Select(d => new AllDepartmentDto
@@ -36,7 +56,8 @@ namespace WorkersManagement.API.Controllers
                     Name = d.Name,
                     Description = d.Description,
                     TeamName = d.Teams?.Name,
-                    Users = d.Workers?.Select(u => u.FirstName).ToList() ?? new List<string>() 
+                    SubTeamName = d.Subteams?.Name,
+                    Workers = d.Workers?.Select(u => u.FirstName).ToList() ?? new List<string>() 
                 }).ToList();
 
                 return Ok(result);
@@ -50,36 +71,76 @@ namespace WorkersManagement.API.Controllers
     
 
         [HttpPost("add-department")]
-        [Authorize(Policy = "SubTeamLead")]
+       [Authorize(Policy = "SubTeamLead")]
         public async Task<IActionResult> AddDepartment([FromBody] CreateDepartmenDto req)
         {
             try
             {
+                // Manual role check against UserRole enum
+                var userRoles = User.Claims
+                    .Where(c => c.Type == ClaimTypes.Role)
+                    .Select(c => c.Value)
+                    .ToList();
+
+                bool hasRequiredRole = userRoles.Any(role =>
+                    role == UserRole.Admin.ToString() ||
+                    role == UserRole.SuperAdmin.ToString());
+
+                if (!hasRequiredRole)
+                {
+                    _logger.LogWarning("User with roles {Roles} attempted to create a new department but lacks required role (Admin or SuperAdmin).", string.Join(", ", userRoles));
+                    return Forbid("User does not have the required role to create a department.");
+                }
+
                 if (string.IsNullOrWhiteSpace(req.Name))
                     return BadRequest("Department name is required.");
 
                 if (string.IsNullOrWhiteSpace(req.Description))
                     return BadRequest("Department description is required.");
 
+                if (string.IsNullOrWhiteSpace(req.TeamName) && string.IsNullOrWhiteSpace(req.SubTeamName))
+                    return BadRequest("Either a Team or SubTeam must be specified.");
 
-                var availableTeams = await _teamRepository.GetAllTeamsAsync();
-                var selectedTeam = availableTeams
-                    .FirstOrDefault(t => string.Equals(t.Name.Trim(), req.TeamName.Trim(), StringComparison.OrdinalIgnoreCase));
-                if (selectedTeam == null)
-                    return BadRequest("Selected team is invalid.");
 
-                // SubTeamLeads can only create departments in their own team
-                if (User.IsInRole(UserRole.SubTeamLead.ToString()) && selectedTeam.Id.ToString() != User.FindFirst("TeamId")?.Value)
-                    return Forbid("SubTeamLeads can only create departments in their own team.");
-
-                var department = new Department
+                Department department = new()
                 {
                     Id = Guid.NewGuid(),
                     Name = req.Name.Trim(),
-                    Description = req.Description.Trim(),
-                    TeamId = selectedTeam.Id,
-                    Teams = selectedTeam
+                    Description = req.Description.Trim()
                 };
+
+                if (!string.IsNullOrWhiteSpace(req.SubTeamName))
+                {
+                    var subTeam = await _subTeamRepository.GetSubTeamsByTeamNameAsync(req.SubTeamName.Trim());
+                    if (subTeam == null)
+                        return BadRequest("Specified SubTeam is invalid.");
+
+                    var team = await _teamRepository.GetTeamByNameAsync(subTeam.Team.Name);
+                    if (team == null)
+                        return BadRequest("SubTeam's parent team not found.");
+
+                    department.SubTeamId = subTeam.Id;
+                    department.TeamId = subTeam.TeamId;
+                    department.Subteams = subTeam;
+                    department.Teams = team;
+                }
+                else
+                {
+                    var team = await _teamRepository.GetTeamByNameAsync(req.TeamName!.Trim());
+                    if (team == null)
+                        return BadRequest("Specified Team is invalid.");
+
+                    department.TeamId = team.Id;
+                    department.Teams = team;
+                }
+
+                // SubTeamLead can only create within their own team
+                if (User.IsInRole(UserRole.SubTeamLead.ToString()) &&
+                    department.TeamId.ToString() != User.FindFirst("TeamId")?.Value)
+                {
+                    return Forbid("SubTeamLeads can only create departments in their own team.");
+                }
+
                 var createdDepartment = await _departmentRepository.CreateDepartmentAsync(department);
                 return Ok(createdDepartment);
             }
@@ -97,6 +158,21 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                // Manual role check against UserRole enum
+                var userRoles = User.Claims
+                    .Where(c => c.Type == ClaimTypes.Role)
+                    .Select(c => c.Value)
+                    .ToList();
+
+                bool hasRequiredRole = userRoles.Any(role =>
+                    role == UserRole.HOD.ToString());
+
+                if (!hasRequiredRole)
+                {
+                    _logger.LogWarning("User with roles {Roles} attempted to fetch deaprtment but lacks required role (Admin or SuperAdmin).", string.Join(", ", userRoles));
+                    return Forbid("User does not have the required role to fetch department data.");
+                }
+
                 var department = await _departmentRepository.GetDepartmentByNameAsync(departmentName);
 
                 // HODs can only view their own department
@@ -131,6 +207,22 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                // Manual role check against UserRole enum
+                var userRoles = User.Claims
+                    .Where(c => c.Type == ClaimTypes.Role)
+                    .Select(c => c.Value)
+                    .ToList();
+
+                bool hasRequiredRole = userRoles.Any(role =>
+                    role == UserRole.Admin.ToString() ||
+                    role == UserRole.SuperAdmin.ToString());
+
+                if (!hasRequiredRole)
+                {
+                    _logger.LogWarning("User with roles {Roles} attempted to update a department but lacks required role (Admin or SuperAdmin).", string.Join(", ", userRoles));
+                    return Forbid("User does not have the required role to update deaprtment.");
+                }
+
                 if (id != updatedDepartment.Id)
                     return BadRequest("Department ID mismatch.");
 
@@ -155,6 +247,21 @@ namespace WorkersManagement.API.Controllers
 
             try
             {
+                // Manual role check against UserRole enum
+                var userRoles = User.Claims
+                    .Where(c => c.Type == ClaimTypes.Role)
+                    .Select(c => c.Value)
+                    .ToList();
+
+                bool hasRequiredRole = userRoles.Any(role =>
+                    role == UserRole.SuperAdmin.ToString());
+
+                if (!hasRequiredRole)
+                {
+                    _logger.LogWarning("User with roles {Roles} attempted to delete department but lacks required role (Admin or SuperAdmin).", string.Join(", ", userRoles));
+                    return Forbid("User does not have the required role to delete department.");
+                }
+
                 var result = await _departmentRepository.DeleteDepartmentAsync(id);
                 if (!result)
                     return NotFound("Team not found.");

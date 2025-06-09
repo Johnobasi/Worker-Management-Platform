@@ -129,11 +129,10 @@ namespace WorkersManagement.API.Controllers
             {
                 var workerId = Guid.Parse(User.FindFirst("WorkerId")?.Value!);
 
-                var completion = new UpdateHabit
+                var completion = new HabitCompletion
                 {
                     Id = Guid.NewGuid(),
                     HabitId = request.HabitId,
-                    WorkerId = workerId,
                     Type = request.Type,
                     CompletedAt = request.CompletionDate ?? DateTime.UtcNow
                 };
