@@ -1,6 +1,7 @@
-﻿using WorkersManagement.Infrastructure.Enumerations;
+﻿using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Domain.Dtos
 {
@@ -14,6 +15,7 @@ namespace WorkersManagement.Domain.Dtos
 
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public string DepartmentName { get; set; } 
+        public string DepartmentName { get; set; }
+        public IFormFile ProfilePicture { get; set; } = null;
     }
 }

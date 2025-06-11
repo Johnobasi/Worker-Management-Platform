@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Mail;
@@ -18,6 +19,7 @@ namespace WorkersManagement.Core.Repositories
         private readonly ILogger<WokerManagementRepository> _logger = logger;
         private readonly IDepartmentRepository _departmentRepository = departmentRepository;
        private readonly IEmailService _emailService = emailService;
+        private readonly string _profilePictureStoragePath = "uploads/ProfilePictures";
 
         private static readonly Dictionary<string, string> TeamCodeMap = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -78,6 +80,12 @@ namespace WorkersManagement.Core.Repositories
                 var resetToken = Guid.NewGuid().ToString();
                 var resetTokenExpiration = DateTime.UtcNow.AddHours(24); // Token expires in 24 hours
 
+                // Handle profile picture upload
+                string? profilePictureUrl = null;
+                if (dto.ProfilePicture != null)
+                {
+                    profilePictureUrl = await SaveProfilePictureAsync(dto.ProfilePicture, workerNumber);
+                }
 
                 var workerToAdd = new Worker
                 {
@@ -93,10 +101,11 @@ namespace WorkersManagement.Core.Repositories
                     PasswordResetToken = resetToken,
                     PasswordResetTokenExpiration = resetTokenExpiration,
                     Status = true,
-                    Attendances = new List<Attendance>(),
-                    Habits = new List<Habit>(),
-                    HabitCompletions = new List<HabitCompletion>(),
-                    Rewards = new List<WorkerReward>()
+                    ProfilePictureUrl = profilePictureUrl,
+                    Attendances = [],
+                    Habits = [],
+                    HabitCompletions = [],
+                    Rewards = []
                 };
 
                 await _context.Workers.AddAsync(workerToAdd);
@@ -212,6 +221,34 @@ namespace WorkersManagement.Core.Repositories
                 _logger.LogError(ex, "Failed to load or populate email template for {Email}", worker.Email);
                 throw;
             }
+        }
+
+        private async Task<string> SaveProfilePictureAsync(IFormFile file, string workerNumber)
+        {
+            // Validate file
+            if (file.Length == 0)
+                throw new ArgumentException("Profile picture file is empty.");
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png" };
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(extension))
+                throw new ArgumentException("Invalid file type. Only JPG, JPEG, and PNG are allowed.");
+
+            // Generate unique file name
+            var fileName = $"{workerNumber}_{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(_profilePictureStoragePath, fileName);
+
+            // Ensure directory exists
+            Directory.CreateDirectory(_profilePictureStoragePath);
+
+            // Save file to local storage (or cloud storage in production)
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // Return URL (adjust based on your hosting setup)
+            return $"/{_profilePictureStoragePath}/{fileName}";
         }
     }
 }

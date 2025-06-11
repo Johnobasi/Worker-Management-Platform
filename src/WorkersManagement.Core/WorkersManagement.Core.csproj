@@ -41,4 +41,8 @@
     <EmbeddedResource Include="Templates\PasswordToken.html" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="uploads\ProfilePictures\" />
+  </ItemGroup>
+
 </Project>

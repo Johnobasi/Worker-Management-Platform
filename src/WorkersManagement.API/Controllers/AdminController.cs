@@ -25,7 +25,7 @@ namespace WorkersManagement.API.Controllers
 
         [HttpPost("create-worker")]
         [Authorize(Policy = "Admin")]
-        public async Task<IActionResult> CreateWorker([FromBody] CreateNewWorkerDto dto)
+        public async Task<IActionResult> CreateWorker([FromForm] CreateNewWorkerDto dto)
         {
             try
             {

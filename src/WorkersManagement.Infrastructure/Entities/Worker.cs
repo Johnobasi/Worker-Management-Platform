@@ -10,6 +10,7 @@ namespace WorkersManagement.Infrastructure
         public string WorkerNumber { get; set; }
         public string FirstName { get;  set; }
         public string LastName { get;  set; }
+        public string ProfilePictureUrl { get; set; } = null;
         public string QRCode { get; set; }
         public bool Status { get; set; }
         public string Email { get; set; }
