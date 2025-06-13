@@ -30,55 +30,71 @@ namespace WorkersManagement.API.Controllers
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UploadDevotional([FromForm] UploadDevotionalRequest request)
         {
-            if (request.File == null || request.File.Length == 0)
-                return BadRequest("No file uploaded.");
-
-            // Ensure directory exists
-            var devotionalFolder = Path.Combine(Directory.GetCurrentDirectory(), "Devotionals");
-            if (!Directory.Exists(devotionalFolder))
-                Directory.CreateDirectory(devotionalFolder);
-
-            // Delete old devotionals
-            var oldDevotionals = await _devotionalService.GetAllDevotionalsAsync();
-            foreach (var oldDevotional in oldDevotionals)
+            try
             {
-                var fullOldPath = Path.Combine(Directory.GetCurrentDirectory(), oldDevotional.FilePath);
-                if (System.IO.File.Exists(fullOldPath))
-                    System.IO.File.Delete(fullOldPath);
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
 
-                await _devotionalService.DeleteDevotionalAsync(oldDevotional.Id);
+
+                if (request.File == null || request.File.Length == 0)
+                    return BadRequest("No file uploaded.");
+
+                // Ensure directory exists
+                var devotionalFolder = Path.Combine(Directory.GetCurrentDirectory(), "Devotionals");
+                if (!Directory.Exists(devotionalFolder))
+                    Directory.CreateDirectory(devotionalFolder);
+
+                // Delete old devotionals
+                var oldDevotionals = await _devotionalService.GetAllDevotionalsAsync();
+                foreach (var oldDevotional in oldDevotionals)
+                {
+                    var fullOldPath = Path.Combine(Directory.GetCurrentDirectory(), oldDevotional.FilePath);
+                    if (System.IO.File.Exists(fullOldPath))
+                        System.IO.File.Delete(fullOldPath);
+
+                    await _devotionalService.DeleteDevotionalAsync(oldDevotional.Id);
+                }
+
+                // Save new devotional
+                var fileName = $"{Guid.NewGuid()}_{request.File.FileName}";
+                var fullFilePath = Path.Combine(devotionalFolder, fileName);
+
+                using (var stream = new FileStream(fullFilePath, FileMode.Create))
+                {
+                    await request.File.CopyToAsync(stream);
+                }
+
+                var newDevotional = new Devotional
+                {
+                    Id = Guid.NewGuid(),
+                    FilePath = Path.Combine("Devotionals", fileName), // Relative path for storage
+                    UploadedAt = DateTime.UtcNow
+                };
+
+                await _devotionalService.AddDevotionalAsync(newDevotional);
+
+                // Send email notifications
+                var users = await _userRepository.GetAllWorkersAsync();
+                foreach (var user in users)
+                {
+                    await _emailService.SendEmailAsync(
+                        user.Email,
+                        "New Monthly Devotional Available",
+                        "A new monthly devotional has been uploaded. Please check your dashboard to download it."
+                    );
+                }
+
+                return Ok("Devotional uploaded and notifications sent.");
             }
-
-            // Save new devotional
-            var fileName = $"{Guid.NewGuid()}_{request.File.FileName}";
-            var fullFilePath = Path.Combine(devotionalFolder, fileName);
-
-            using (var stream = new FileStream(fullFilePath, FileMode.Create))
+            catch (Exception ex)
             {
-                await request.File.CopyToAsync(stream);
+                _logger.LogError(ex, "Error occurred while uploading devotional.");
+                return StatusCode(500, "An error occurred while uploading the devotional.");
             }
-
-            var newDevotional = new Devotional
-            {
-                Id = Guid.NewGuid(),
-                FilePath = Path.Combine("Devotionals", fileName), // Relative path for storage
-                UploadedAt = DateTime.UtcNow
-            };
-
-            await _devotionalService.AddDevotionalAsync(newDevotional);
-
-            // Send email notifications
-            var users = await _userRepository.GetAllWorkersAsync();
-            foreach (var user in users)
-            {
-                await _emailService.SendEmailAsync(
-                    user.Email,
-                    "New Monthly Devotional Available",
-                    "A new monthly devotional has been uploaded. Please check your dashboard to download it."
-                );
-            }
-
-            return Ok("Devotional uploaded and notifications sent.");
+            
         }
 
 

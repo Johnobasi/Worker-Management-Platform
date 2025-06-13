@@ -34,6 +34,11 @@ namespace WorkersManagement.API.Controllers
             _logger.LogInformation("Creating new subteam with Team Name: {Name}", subTeamCreateDto?.Name);
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
                 // Check if user has the required role/permission
                 if (!User.IsInRole(UserRole.Admin.ToString()))
                 {
@@ -126,6 +131,11 @@ namespace WorkersManagement.API.Controllers
             _logger.LogInformation("Updating subteam with Id: {SubTeamId}", id);
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
                 if (!User.IsInRole(UserRole.Admin.ToString()))
                 {
                     _logger.LogWarning("User {UserId} attempted to create subteam without required permissions", User?.Identity?.Name);

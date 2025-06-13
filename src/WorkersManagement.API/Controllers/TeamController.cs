@@ -31,6 +31,11 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
                 //// Manual role check against UserRole enum
                 var userRoles = User.Claims
                     .Where(c => c.Type == ClaimTypes.Role)
@@ -149,6 +154,11 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
                 // Manual role check against UserRole enum
                 var userRoles = User.Claims
                     .Where(c => c.Type == ClaimTypes.Role)

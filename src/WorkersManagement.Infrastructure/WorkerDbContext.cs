@@ -85,6 +85,14 @@ namespace WorkersManagement.Infrastructure
                 .WithMany(d => d.Workers)
                 .HasForeignKey(w => w.DepartmentId)
                 .IsRequired(false);
+
+
+            modelBuilder.Entity<HabitCompletion>()
+                .HasOne(hc => hc.Worker)
+                .WithMany()
+                .HasForeignKey(hc => hc.WorkerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
         }
     }
 }

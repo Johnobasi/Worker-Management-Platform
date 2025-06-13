@@ -9,7 +9,10 @@ namespace WorkersManagement.Domain.Dtos
         [Required]
         public HabitType Type { get; set; }
 
+        [Required(ErrorMessage = "Habit name is required.")]
+
         public string Notes { get; set; }
+
 
         public decimal? Amount { get; set; } // Only required for Giving
     }

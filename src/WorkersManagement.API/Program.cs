@@ -149,7 +149,6 @@ namespace WorkersManagement.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            app.UseStaticFiles();
             app.UseCors();
             app.UseHttpsRedirection();
             app.UseAuthentication();

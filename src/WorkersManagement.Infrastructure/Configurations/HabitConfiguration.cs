@@ -23,6 +23,9 @@ namespace WorkersManagement.Infrastructure.Configurations
                 .WithMany(w => w.Habits)
                 .HasForeignKey(h => h.WorkerId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Property(h => h.Amount)
+                .HasColumnType("decimal(18,2)");
         }
     }
 }

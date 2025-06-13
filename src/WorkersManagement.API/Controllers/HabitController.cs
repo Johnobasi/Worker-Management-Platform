@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
@@ -34,6 +35,11 @@ namespace WorkersManagement.API.Controllers
 
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
                 var habit = new Habit
                 {
                     Type = request.Type,
@@ -57,6 +63,12 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
+
                 if (id != dto.Id)
                     return BadRequest("Habit ID mismatch.");
 
@@ -89,6 +101,11 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
                 var result = await _habitService.DeleteHabitAsync(id);
                 if (!result)
                     return NotFound($"Habit with ID '{id}' not found.");
@@ -108,6 +125,12 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
+
                 var result = await _habitService.MapHabitToWorkerAsync(dto.HabitId, dto.WorkerId);
                 if (!result)
                     return NotFound("Habit or Worker not found.");
@@ -126,6 +149,12 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(new { Errors = errors });
+                }
+
                 var currentWorkerId = User.FindFirst("WorkerId")?.Value;
                 var isAdmin = User.IsInRole(UserRole.Admin.ToString());
 
@@ -151,8 +180,11 @@ namespace WorkersManagement.API.Controllers
         }
     }
     public record MarkHabitCompletionDto
-        {
+    {
+        [Required(ErrorMessage = "Habit ID is required.")]
         public Guid HabitId { get; init; }
+
+        [Required(ErrorMessage = "Completion status is required.")]
         public bool IsCompleted { get; init; }
     }
 

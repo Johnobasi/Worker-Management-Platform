@@ -27,6 +27,11 @@ namespace WorkersManagement.API.Controllers
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> CreateWorker([FromForm] CreateNewWorkerDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return BadRequest(new { Errors = errors });
+            }
             try
             {
                 if (User.IsInRole(UserRole.SubTeamLead.ToString()) || User.IsInRole(UserRole.HOD.ToString()))
@@ -122,6 +127,13 @@ namespace WorkersManagement.API.Controllers
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UpdateWorkerAsync(Guid id, [FromBody] UpdateWorkersDto request)
         {
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                return BadRequest(new { Errors = errors });
+            }
+
             try
             {
                 var worker = await _workersRepository.GetWorkerByIdAsync(id);
