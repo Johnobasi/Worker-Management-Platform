@@ -1,4 +1,5 @@
 ﻿using WorkersManagement.Domain.Dtos.WorkerAuthentication;
+using WorkersManagement.Infrastructure;
 
 namespace WorkersManagement.Domain.Interfaces
 {
@@ -10,5 +11,6 @@ namespace WorkersManagement.Domain.Interfaces
         Task ResetPasswordAsync(SetPasswordDto dto);
         Task ResetPasswordAsync(string email, string token, string newPassword, string confirmPassword);
         Task VerifyTokenAsync(string email, string token);
+        Task SendPasswordSetupEmailAsync(Worker worker);
     }
 }

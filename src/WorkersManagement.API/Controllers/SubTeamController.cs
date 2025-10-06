@@ -13,7 +13,6 @@ namespace WorkersManagement.API.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class SubTeamController : ControllerBase
     {
         private readonly ISubTeamRepository _subTeamService;
@@ -28,7 +27,6 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("add-new-subteam")]
-      [Authorize(Policy ="Admin")]
         public async Task<ActionResult<SubTeamDto>> CreateSubTeam([FromBody] CreateSubTeamDto subTeamCreateDto)
         {
             _logger.LogInformation("Creating new subteam with Team Name: {Name}", subTeamCreateDto?.Name);
@@ -39,13 +37,6 @@ namespace WorkersManagement.API.Controllers
                     var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                     return BadRequest(new { Errors = errors });
                 }
-                // Check if user has the required role/permission
-                if (!User.IsInRole(UserRole.Admin.ToString()))
-                {
-                    _logger.LogWarning("User {UserId} attempted to create subteam without required permissions", User?.Identity?.Name);
-                    return Unauthorized("You do not have the required role or permission to create a subteam.");
-                }
-
                 if (string.IsNullOrWhiteSpace(subTeamCreateDto!.Name))
                     return BadRequest("Department name is required.");
 
@@ -79,17 +70,11 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("get-subteam-by-Id/{id}")]
-        [Authorize(Policy ="Admin")]
         public async Task<ActionResult<SubTeamDto>> GetSubTeam(Guid id)
         {
             _logger.LogInformation("Retrieving subteam with Id: {SubTeamId}", id);
             try
             {
-                if (!User.IsInRole(UserRole.SubTeamLead.ToString()))
-                {
-                    _logger.LogWarning("User {UserId} attempted to create subteam without required permissions", User?.Identity?.Name);
-                    return Unauthorized("You do not have the required role or permission to retrieve subteam.");
-                }
                 var subTeam = await _subTeamService.GetSubTeamByIdAsync(id);
                 if (subTeam == null)
                 {
@@ -107,7 +92,6 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("get-all-subteams")]
-        [Authorize(Policy ="SubTeamLead")]
         public async Task<ActionResult<IEnumerable<SubTeamDto>>> GetAllSubTeams()
         {
             _logger.LogInformation("Retrieving all subteams");
@@ -136,11 +120,7 @@ namespace WorkersManagement.API.Controllers
                     var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                     return BadRequest(new { Errors = errors });
                 }
-                if (!User.IsInRole(UserRole.Admin.ToString()))
-                {
-                    _logger.LogWarning("User {UserId} attempted to create subteam without required permissions", User?.Identity?.Name);
-                    return Unauthorized("You do not have the required role or permission to update a subteam.");
-                }
+
                 if (subTeamDto == null)
                 {
                     _logger.LogWarning("UpdateSubTeam failed: SubTeamDto is null for Id: {SubTeamId}", id);
@@ -169,17 +149,11 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpDelete("delete-subteam/{id}")]
-        [Authorize(Policy = "Admin")]
         public async Task<ActionResult> DeleteSubTeam(Guid id)
         {
             _logger.LogInformation("Deleting subteam with Id: {SubTeamId}", id);
             try
             {
-                if (!User.IsInRole(UserRole.Admin.ToString()))
-                {
-                    _logger.LogWarning("User {UserId} attempted to create subteam without required permissions", User?.Identity?.Name);
-                    return Unauthorized("You do not have the required role or permission to delete a subteam.");
-                }
                 var deleted = await _subTeamService.DeleteSubTeamAsync(id);
                 if (!deleted)
                 {
@@ -202,7 +176,6 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpGet("get-subteams-by-team/{teamId}")]
-        [Authorize(Policy = "SubTeamLead")]
         public async Task<ActionResult<IEnumerable<SubTeamDto>>> GetSubTeamsByTeamId(string teamName)
         {
             _logger.LogInformation("Retrieving subteams for team: {TeamName}", teamName);

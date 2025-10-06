@@ -51,7 +51,32 @@ namespace WorkersManagement.Core.Repositories
                 _logger.LogInformation("Login successful for {Email}", dto.Email);
                 return token;
         }
+        public async Task SendPasswordSetupEmailAsync(Worker worker)
+        {
+            _logger.LogInformation("Sending password setup email to {Email}", worker.Email);
 
+            // Generate reset token
+            var resetToken = Guid.NewGuid().ToString();
+            worker.PasswordResetToken = resetToken;
+            worker.PasswordResetTokenExpiration = DateTime.UtcNow.AddHours(24);
+
+            await _context.SaveChangesAsync();
+
+            var baseUrl = _configuration["AppSettings:FrontendBaseUrl"]
+              ?? "https://harvestersuk.org";
+            
+            // Construct reset link safely
+            var resetLink = $"{baseUrl.TrimEnd('/')}/verify-token" +
+                            $"?email={Uri.EscapeDataString(worker.Email)}" +
+                            $"&token={Uri.EscapeDataString(resetToken)}";
+
+            // Load and populate the email template
+            var subject = "Set Your Password - Workers CMS";
+            string body = await LoadPasswordResetNewWorkerTemplate(worker, resetLink);
+
+            await _emailService.SendEmailAsync(worker.Email, subject, body);
+            _logger.LogInformation("Password setup email sent to {Email}", worker.Email);
+        }
         public async Task LogoutAsync(string email)
         {
             _logger.LogInformation("Logging out user: {Email}", email);
@@ -92,6 +117,9 @@ namespace WorkersManagement.Core.Repositories
             worker.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
             worker.PasswordResetToken = null;
             worker.PasswordResetTokenExpiration = null;
+            worker.Status = true;
+            worker.IsConfirmed = true;
+            await _context.SaveChangesAsync();
 
             await _context.SaveChangesAsync();
             _logger.LogInformation("Password reset successful");
@@ -125,6 +153,10 @@ namespace WorkersManagement.Core.Repositories
             worker.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword.Trim());
             worker.PasswordResetToken = null;
             worker.PasswordResetTokenExpiration = null;
+            worker.PasswordResetToken = null;
+            worker.PasswordResetTokenExpiration = null;
+            worker.Status = true;
+            worker.IsConfirmed = true;
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Password reset successful for {Email}", email);
@@ -155,26 +187,34 @@ namespace WorkersManagement.Core.Repositories
             _logger.LogInformation("Token verified successfully for {Email}", email);
         }
         private string GenerateJwtToken(Worker worker)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
+            var claims = new List<Claim>
             {
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
+                new(ClaimTypes.NameIdentifier, worker.WorkerNumber),
+                new(ClaimTypes.Email, worker.Email)
+            };
+
+            // Add a Claim for each role
+            foreach (var role in worker.Roles.Select(r =>
+                             r is Enum ? r.ToString() :
+                             r.GetType().GetProperty("Role")?.GetValue(r)?.ToString()))
+            {
+                if (!string.IsNullOrWhiteSpace(role))
+                    claims.Add(new Claim(ClaimTypes.Role, role!));
+            }
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-             Subject = new ClaimsIdentity(new[]
-             {
-                    new Claim(ClaimTypes.NameIdentifier, worker.WorkerNumber),
-                    new Claim(ClaimTypes.Email, worker.Email),
-                    new Claim(ClaimTypes.Role, worker.Role.ToString())
-             }),
-                    Expires = DateTime.UtcNow.AddHours(24),
-                    Issuer = _configuration["Jwt:Issuer"],         // ✅ Add this
-                    Audience = _configuration["Jwt:Audience"],     // ✅ Add this
-                    SigningCredentials = new SigningCredentials(
-            new SymmetricSecurityKey(key),
-                 SecurityAlgorithms.HmacSha256Signature)
+                Subject = new ClaimsIdentity(claims),
+                Expires = DateTime.UtcNow.AddHours(24),
+                Issuer = _configuration["Jwt:Issuer"],
+                Audience = _configuration["Jwt:Audience"],
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
             };
-
 
             var token = tokenHandler.CreateToken(tokenDescriptor);
                 return tokenHandler.WriteToken(token);
@@ -240,5 +280,33 @@ namespace WorkersManagement.Core.Repositories
             }
         }
 
+        private async Task<string> LoadPasswordResetNewWorkerTemplate(Worker worker, string resetLink)
+        {
+            try
+            {
+
+                string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                string templatePath = Path.Combine(baseDirectory, "Templates", "PasswordResetNewWorkerTemplate.html");
+                if (!File.Exists(templatePath))
+                {
+                    _logger.LogError("Email template file not found at {Path}", templatePath);
+                    throw new FileNotFoundException("Email template file not found", templatePath);
+                }
+
+                string template = await File.ReadAllTextAsync(templatePath);
+
+                template = template
+                    .Replace("{FirstName}", worker.FirstName)
+                    .Replace("{LastName}", worker.LastName)
+                    .Replace("{ResetLink}", resetLink);
+
+                return template;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load or populate email template for {Email}", worker.Email);
+                throw;
+            }
+        }
     }
 }

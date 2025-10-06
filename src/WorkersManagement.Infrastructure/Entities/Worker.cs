@@ -6,13 +6,13 @@ namespace WorkersManagement.Infrastructure
     public class Worker
     {
         public Guid Id { get; set; }
-        public UserRole Role { get; set; }
+        public List<UserRole> Roles { get; set; } = new();
         public string WorkerNumber { get; set; }
         public string FirstName { get;  set; }
         public string LastName { get;  set; }
         public string ProfilePictureUrl { get; set; } = null;
         public string QRCode { get; set; }
-        public bool Status { get; set; }
+        public bool? Status { get; set; } 
         public string Email { get; set; }
         public string PasswordHash { get; set; }
         public DateTime? LastLogin { get; set; }
@@ -25,6 +25,7 @@ namespace WorkersManagement.Infrastructure
         public ICollection<HabitCompletion> HabitCompletions { get; set; } = new List<HabitCompletion>();
         public ICollection<WorkerReward> Rewards { get; set; }
         public Guid? DepartmentId { get; set; } // Explicit foreign key
+        public bool IsConfirmed { get; set; }
     }
 
 }

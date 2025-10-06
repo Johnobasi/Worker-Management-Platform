@@ -33,7 +33,7 @@ namespace WorkersManagement.Core.BackGroundJob
                 if (workerRewardRepository.IsSunday(currentTime) && IsScheduledTime(currentTime))
                 {
                     var activeWorkers = await context.Workers
-                        .Where(w => w.Status)
+                        .Where(w => w.Status.HasValue)
                         .ToListAsync(stoppingToken);
 
                     foreach (var worker in activeWorkers)

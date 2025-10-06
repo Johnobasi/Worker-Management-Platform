@@ -1,25 +1,21 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Net;
-using System.Net.Mail;
-using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
 using WorkersManagement.Infrastructure.Entities;
-using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Core.Repositories
 {
     public class WokerManagementRepository(WorkerDbContext workerDbContext,
-        ILogger<WokerManagementRepository> logger, IDepartmentRepository departmentRepository, IEmailService emailService) : IWorkerManagementRepository
+        ILogger<WokerManagementRepository> logger, IDepartmentRepository departmentRepository, IWorkersAuthRepository authRepository) : IWorkerManagementRepository
     {
         private readonly WorkerDbContext _context = workerDbContext;
         private readonly ILogger<WokerManagementRepository> _logger = logger;
         private readonly IDepartmentRepository _departmentRepository = departmentRepository;
-       private readonly IEmailService _emailService = emailService;
         private readonly string _profilePictureStoragePath = "uploads/ProfilePictures";
+        private readonly IWorkersAuthRepository _authRepository = authRepository;
 
         private static readonly Dictionary<string, string> TeamCodeMap = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -38,9 +34,6 @@ namespace WorkersManagement.Core.Repositories
 
             if (string.IsNullOrWhiteSpace(dto.Email))
                 throw new ArgumentException("Email is required.");
-
-            if (string.IsNullOrWhiteSpace(dto.Password))
-                throw new ArgumentException("Password is required.");
 
             Department? department = null;
 
@@ -74,8 +67,6 @@ namespace WorkersManagement.Core.Repositories
                 var numericPart = nextWorkerId.ToString("D3");
                 var workerNumber = $"{teamCode}{numericPart}";
 
-                // Hash password
-                var passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password.Trim());
                 // Generate password reset token
                 var resetToken = Guid.NewGuid().ToString();
                 var resetTokenExpiration = DateTime.UtcNow.AddHours(24); // Token expires in 24 hours
@@ -92,11 +83,10 @@ namespace WorkersManagement.Core.Repositories
                     Email = dto.Email,
                     FirstName = dto.FirstName,
                     LastName = dto.LastName,
-                    Role = dto.Role,
+                    Roles = dto.Role.ToList(),
                     Department = department,
                     DepartmentId = department?.Id, // Set foreign key
                     WorkerNumber = workerNumber,
-                    PasswordHash = passwordHash,
                     LastLogin = null,
                     PasswordResetToken = resetToken,
                     PasswordResetTokenExpiration = resetTokenExpiration,
@@ -111,15 +101,7 @@ namespace WorkersManagement.Core.Repositories
                 await _context.Workers.AddAsync(workerToAdd);
                 await _context.SaveChangesAsync();
 
-                // Generate reset link
-                var resetLink = $"https://www.harvestersuk.org/verify-token?email={Uri.EscapeDataString(workerToAdd.Email)}&token={resetToken}";
-
-                // Load and populate the HTML template
-                var subject = "Set Your Password - Workers CMS";
-                string body = await LoadAndPopulateEmailTemplate(workerToAdd, resetLink);
-
-                // Send password reset email
-                await _emailService.SendEmailAsync(workerToAdd.Email, subject,body);
+                await _authRepository.SendPasswordSetupEmailAsync(workerToAdd);
 
                 _logger.LogInformation("Worker created with WorkerNumber: {WorkerNumber}", workerNumber);
 

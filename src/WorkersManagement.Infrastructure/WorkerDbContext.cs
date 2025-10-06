@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WorkersManagement.Infrastructure.Entities;
 using WorkersManagement.Infrastructure.Enumerations;
 
@@ -68,11 +69,9 @@ namespace WorkersManagement.Infrastructure
                     v => v.ToString(),
                     v => (HabitType)Enum.Parse(typeof(HabitType), v));
 
-            modelBuilder.Entity<Worker>()
-                .Property(w => w.Role)
-                .HasConversion(
-                    v => v.ToString(),
-                    v => Enum.Parse<UserRole>(v));
+                modelBuilder.Entity<Worker>()
+                .Property(w => w.Roles)
+                .HasConversion(new UserRoleListConverter());
 
             modelBuilder.Entity<Worker>()
                 .HasMany(w => w.Habits)
@@ -93,6 +92,20 @@ namespace WorkersManagement.Infrastructure
                 .HasForeignKey(hc => hc.WorkerId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+
+
+        }
+
+        public class UserRoleListConverter : ValueConverter<List<UserRole>, string>
+        {
+            public UserRoleListConverter()
+                : base(
+                    v => string.Join(",", v.Select(r => r.ToString())),
+                    v => v.Split(",", StringSplitOptions.RemoveEmptyEntries)
+                          .Select(s => (UserRole)Enum.Parse(typeof(UserRole), s))
+                          .ToList()
+                )
+            { }
         }
     }
 }

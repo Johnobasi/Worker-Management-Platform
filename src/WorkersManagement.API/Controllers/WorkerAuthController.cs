@@ -10,16 +10,10 @@ namespace WorkersManagement.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class WorkerAuthController : ControllerBase
+    public class WorkerAuthController(IWorkersAuthRepository authRepository, ILogger<WorkerAuthController> logger) : ControllerBase
     {
-        private readonly IWorkersAuthRepository _authRepository;
-        private readonly ILogger<WorkerAuthController> _logger;
-
-        public WorkerAuthController(IWorkersAuthRepository authRepository, ILogger<WorkerAuthController> logger)
-        {
-            _authRepository = authRepository;
-            _logger = logger;
-        }
+        private readonly IWorkersAuthRepository _authRepository = authRepository;
+        private readonly ILogger<WorkerAuthController> _logger = logger;
 
         [HttpPost("worker-login")]
         [AllowAnonymous]

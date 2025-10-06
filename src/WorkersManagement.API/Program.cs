@@ -79,8 +79,15 @@ namespace WorkersManagement.API
                 options.AddPolicy("DepartmentHOD", policy =>
                     policy.RequireRole(UserRole.HOD.ToString())
                           .RequireClaim("DepartmentId"));
+
+
             });
 
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("CanCreateWorkers", policy =>
+                    policy.RequireRole("Admin", "SuperAdmin", "SubTeamLead"));
+            });
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
            

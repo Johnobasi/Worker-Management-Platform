@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using WorkersManagement.Core.Repositories;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Workers;
 using WorkersManagement.Domain.Interfaces;
@@ -10,7 +10,7 @@ namespace WorkersManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class AdminController : ControllerBase
     {
         private readonly IWorkerManagementRepository _workersRepository;
@@ -24,7 +24,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("create-worker")]
-        [Authorize(Policy = "Admin")]
+        //[Authorize(Policy = "CanCreateWorkers")]
         public async Task<IActionResult> CreateWorker([FromForm] CreateNewWorkerDto dto)
         {
             if (!ModelState.IsValid)
@@ -34,20 +34,10 @@ namespace WorkersManagement.API.Controllers
             }
             try
             {
-                if (User.IsInRole(UserRole.SubTeamLead.ToString()) || User.IsInRole(UserRole.HOD.ToString()))
-                {
-                    var department = await _departmentRepository.GetDepartmentByNameAsync(dto.DepartmentName);
-                    if (department == null)
-                        return BadRequest("Specified department does not exist.");
-
-                    var userDepartmentId = User.FindFirst("DepartmentId")?.Value;
-                    var userTeamId = User.FindFirst("TeamId")?.Value;
-
-                    if (User.IsInRole(UserRole.SubTeamLead.ToString()) && department.TeamId.ToString() != userTeamId)
-                        return Forbid("SubTeamLeads can only add workers to their own subteam's departments.");
-                    if (User.IsInRole(UserRole.HOD.ToString()) && department.Id.ToString() != userDepartmentId)
-                        return Forbid("HODs can only add workers to their own department.");
-                }
+                var department = await _departmentRepository.GetDepartmentByNameAsync(dto.DepartmentName);
+                if (department == null)
+                return BadRequest("Specified department does not exist.");
+               
                 var worker = await _workersRepository.CreateWorkerAsync(dto);
                 _logger.LogInformation("Worker created successfully with email: {Email}", dto.Email);
                 return CreatedAtAction(nameof(GetWorkerById), new { id = worker.Id }, worker);
@@ -56,6 +46,79 @@ namespace WorkersManagement.API.Controllers
             {
                 _logger.LogError(ex, "Error occurred while creating worker with email {Email}", dto.Email);
                 return StatusCode(500, "An error occurred while creating the worker.");
+            }
+        }
+
+        [HttpPost("upload-workers")]
+        //[Authorize(Policy = "CanCreateWorkers")]
+        public async Task<IActionResult> UploadWorkers(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Please upload a valid Excel file.");
+
+            var results = new List<object>();
+
+            try
+            {
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+
+                using var workbook = new XLWorkbook(stream);
+                var worksheet = workbook.Worksheets.FirstOrDefault();
+                if (worksheet == null)
+                    return BadRequest("No worksheet found in the Excel file.");
+
+                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1); // skip header
+                if (rows == null)
+                    return BadRequest("No data rows found in Excel sheet.");
+
+                foreach (var row in rows)
+                {
+                    try
+                    {
+                        var dto = new CreateNewWorkerDto
+                        {
+                            Email = row.Cell(1).GetString().Trim(),            // ✅ Column A: Email
+                            FirstName = row.Cell(2).GetString().Trim(),        // ✅ Column B: FirstName
+                            LastName = row.Cell(3).GetString().Trim(),         // ✅ Column C: LastName
+                            DepartmentName = row.Cell(4).GetString().Trim(),   // ✅ Column D: DepartmentName
+                            Role = [.. row.Cell(5).GetString()                 // ✅ Column E: Role
+                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                .Select(r => Enum.Parse<UserRole>(r.Trim(), true))],
+                            ProfilePicture = null
+                        };
+
+                        var worker = await _workersRepository.CreateWorkerAsync(dto);
+                        results.Add(new
+                        {
+                            Row = row.RowNumber(),
+                            Email = dto.Email,
+                            Status = "Created",
+                            WorkerId = worker.Id
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error on row {Row}", row.RowNumber());
+                        results.Add(new
+                        {
+                            Row = row.RowNumber(),
+                            Error = ex.Message
+                        });
+                    }
+                }
+
+                return Ok(new
+                {
+                    Message = "Bulk worker upload completed.",
+                    TotalProcessed = results.Count,
+                    Results = results
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing uploaded Excel file.");
+                return StatusCode(500, "An error occurred while processing the Excel file.");
             }
         }
 
@@ -164,7 +227,7 @@ namespace WorkersManagement.API.Controllers
                 // Update fields
                 worker.FirstName = request.FirstName?.Trim();
                 worker.LastName = request.LastName?.Trim();
-                worker.Role = request.Role;
+                worker.Roles = request.Role.ToList();
                 worker.Department = department;
 
                 await _workersRepository.UpdateWorkerAsync(worker);
