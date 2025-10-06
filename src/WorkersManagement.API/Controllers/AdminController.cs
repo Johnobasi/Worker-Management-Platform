@@ -1,6 +1,7 @@
 ﻿using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WorkersManagement.Core.DTOS;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Workers;
 using WorkersManagement.Domain.Interfaces;
@@ -148,8 +149,9 @@ namespace WorkersManagement.API.Controllers
             {
                 var workers = await _workersRepository.GetAllWorkersAsync();
                 workers.Count();
-                _logger.LogInformation("Fetched {Count} workers successfully", workers.Count());
-                return Ok(workers);
+                var workerDtos = workers.ToSummaryDtos();
+                _logger.LogInformation("Fetched {Count} workers successfully", workerDtos.Count());
+                return Ok(workerDtos);
             }
             catch (Exception ex)
             {
