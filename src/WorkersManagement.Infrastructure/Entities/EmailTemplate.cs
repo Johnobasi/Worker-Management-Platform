@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using WorkersManagement.Core.DTOS.EmailComposerDtos;
+using WorkersManagement.Infrastructure.EmailComposerDtos;
 
 namespace WorkersManagement.Infrastructure.Entities
 {

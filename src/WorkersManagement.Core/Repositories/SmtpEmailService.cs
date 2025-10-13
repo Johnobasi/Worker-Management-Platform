@@ -4,9 +4,9 @@ using Microsoft.Extensions.Options;
 using MimeKit;
 using MimeKit.Utils;
 using WorkersManagement.Core.Abstract;
-using WorkersManagement.Core.DTOS.EmailComposerDtos;
 using WorkersManagement.Domain.EmailConfigs;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.EmailComposerDtos;
 
 namespace WorkersManagement.Core.Repositories
 {

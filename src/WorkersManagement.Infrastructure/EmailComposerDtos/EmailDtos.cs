@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 
-namespace WorkersManagement.Core.DTOS.EmailComposerDtos
+namespace WorkersManagement.Infrastructure.EmailComposerDtos
 {
     public class BulkEmailDto
     {
@@ -37,7 +37,7 @@ namespace WorkersManagement.Core.DTOS.EmailComposerDtos
         public string Body { get; set; } = string.Empty;
         public List<Guid> SelectedWorkerIds { get; set; } = new();
         public bool SendToAll { get; set; } = true;
-        public List<IFormFile>? Attachments { get; set; }
+        public List<IFormFile> Attachments { get; set; }
     }
 
     // Template Designer DTOs
@@ -98,7 +98,7 @@ namespace WorkersManagement.Core.DTOS.EmailComposerDtos
         public string LogoUrl { get; set; } = string.Empty;
         public bool SendToAllWorkers { get; set; }
         public List<Guid> SelectedWorkerIds { get; set; } = new();
-        public List<IFormFile>? Attachments { get; set; }
+        public List<IFormFile> Attachments { get; set; }
     }
 
     public class EmailComposerResponseDto

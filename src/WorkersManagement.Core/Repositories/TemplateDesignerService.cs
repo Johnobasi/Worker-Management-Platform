@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using WorkersManagement.Core.DTOS.EmailComposerDtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.EmailComposerDtos;
 using WorkersManagement.Infrastructure.Entities;
 
 namespace WorkersManagement.Core.Repositories

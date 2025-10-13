@@ -1,4 +1,4 @@
-﻿using WorkersManagement.Core.DTOS.EmailComposerDtos;
+﻿using WorkersManagement.Infrastructure.EmailComposerDtos;
 
 namespace WorkersManagement.Core.Abstract
 {
