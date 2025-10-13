@@ -28,7 +28,7 @@ namespace WorkersManagement.Core.Repositories
             { "Missions", "MISS-" }
         };
 
-        public async Task<Worker> CreateWorkerAsync(CreateNewWorkerDto dto)
+        public async Task<Guid> CreateWorkerAsync(CreateNewWorkerDto dto)
         {
             _logger.LogInformation("Creating new user with email: {Email}", dto.Email);
 
@@ -44,10 +44,10 @@ namespace WorkersManagement.Core.Repositories
             department = await _departmentRepository.GetDepartmentByNameAsync(dto.DepartmentName.Trim());
 
             if (department == null)
-                throw new ArgumentException($"Department '{dto.DepartmentName}' does not exist.");
+                throw new ArgumentException("Department {DepartmentName}  does not exist.", dto.DepartmentName);
 
             if (department.TeamId == Guid.Empty)
-                throw new ArgumentException($"Department '{dto.DepartmentName}' is not linked to any team.");
+                throw new ArgumentException("Department {DepartmentName} is not linked to any team.", dto.DepartmentName);
 
             var team = await _context.Teams.FindAsync(department.TeamId);
             if (team == null)
@@ -57,7 +57,7 @@ namespace WorkersManagement.Core.Repositories
             {
                 _logger.LogError("Team code not found for team name: '{TeamName}'. Available team names: {AvailableTeams}",
                     team.Name, string.Join(", ", TeamCodeMap.Keys));
-                throw new ArgumentException($"Team code for '{team.Name}' not defined.");
+                throw new ArgumentException("Team code for {TeamName} not defined.", team.Name);
             }
             
 
@@ -105,7 +105,7 @@ namespace WorkersManagement.Core.Repositories
 
                 _logger.LogInformation("Worker created with WorkerNumber: {WorkerNumber}", workerNumber);
 
-                return workerToAdd;
+                return workerToAdd.Id;
             }
             catch (Exception ex)
             {
@@ -132,7 +132,10 @@ namespace WorkersManagement.Core.Repositories
         {
             try
             {
-                return await _context.Workers.ToListAsync();
+                return await _context.Workers
+                    .Include(d=>d.Department)
+                    .AsNoTracking()
+                    .ToListAsync();
             }
             catch (Exception ex)
             {
@@ -231,6 +234,40 @@ namespace WorkersManagement.Core.Repositories
 
             // Return URL (adjust based on your hosting setup)
             return $"/{_profilePictureStoragePath}/{fileName}";
+        }
+
+        public async Task<List<Worker>> GetAllWorkersForEmailAsync()
+        {
+            try
+            {
+                return await _context.Workers
+                    .Where(w => !string.IsNullOrEmpty(w.Email))
+                    .Include(w => w.Department)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get workers for email");
+                return new List<Worker>();
+            }
+        }
+
+        public async Task<List<Worker>> GetWorkersByIdsAsync(List<Guid> workerIds)
+        {
+            try
+            {
+                return await _context.Workers
+                    .Where(w => workerIds.Contains(w.Id) && !string.IsNullOrEmpty(w.Email))
+                    .Include(w => w.Department)
+                    .AsNoTracking()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get workers by IDs");
+                return new List<Worker>();
+            }
         }
     }
 }

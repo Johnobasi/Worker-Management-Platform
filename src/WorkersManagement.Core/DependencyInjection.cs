@@ -28,7 +28,7 @@ namespace WorkersManagement.Core
             services.AddScoped<IHabitCompletionRepository, HabitCompletionRepository>();
             services.AddScoped<ISubTeamRepository, SubTeamRepository>();
 
-
+            services.AddScoped<ITemplateDesignerService, TemplateDesignerService>();
             services.AddHostedService<SundayRewardProcessor>();
 
             services.Configure<EmailSettings>(configuration.GetSection(nameof(EmailSettings)));

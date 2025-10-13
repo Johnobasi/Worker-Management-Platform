@@ -18,6 +18,7 @@ namespace WorkersManagement.Infrastructure
         public DbSet<Devotional> Devotionals { get; set; }
         public DbSet<HabitCompletion> HabitCompletions { get; set; }
         public DbSet<SubTeam> SubTeams { get; set; }
+        public DbSet<EmailTemplate> EmailTemplates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

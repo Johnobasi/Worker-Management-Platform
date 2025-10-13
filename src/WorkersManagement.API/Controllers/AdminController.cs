@@ -41,7 +41,7 @@ namespace WorkersManagement.API.Controllers
                
                 var worker = await _workersRepository.CreateWorkerAsync(dto);
                 _logger.LogInformation("Worker created successfully with email: {Email}", dto.Email);
-                return CreatedAtAction(nameof(GetWorkerById), new { id = worker.Id }, worker);
+                return CreatedAtAction(nameof(GetWorkerById), new { id = worker }, worker);
             }
             catch (Exception ex)
             {
@@ -95,7 +95,7 @@ namespace WorkersManagement.API.Controllers
                             Row = row.RowNumber(),
                             Email = dto.Email,
                             Status = "Created",
-                            WorkerId = worker.Id
+                            WorkerId = worker
                         });
                     }
                     catch (Exception ex)
