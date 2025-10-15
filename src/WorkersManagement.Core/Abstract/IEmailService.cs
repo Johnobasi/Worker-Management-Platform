@@ -6,7 +6,5 @@ namespace WorkersManagement.Core.Abstract
     {
         Task SendEmailAsync(string to, string subject, string body);
         Task<bool> SendBulkEmailAsync(BulkEmailDto emailDto);
-
     }
-
 }

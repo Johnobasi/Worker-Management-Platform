@@ -1,0 +1,899 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rich Text Template Designer</title>
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .designer-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .designer-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .designer-header h1 {
+                font-size: 24px;
+                font-weight: 600;
+            }
+
+        .designer-body {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            min-height: 800px;
+        }
+
+        /* Tools Panel */
+        .tools-panel {
+            background: #f8f9fa;
+            border-right: 1px solid #e9ecef;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .tools-section {
+            margin-bottom: 25px;
+        }
+
+            .tools-section h3 {
+                font-size: 16px;
+                color: #2c3e50;
+                margin-bottom: 15px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #3498db;
+            }
+
+        .style-control {
+            margin-bottom: 15px;
+        }
+
+            .style-control label {
+                display: block;
+                font-size: 12px;
+                font-weight: 600;
+                color: #5a6c7d;
+                margin-bottom: 5px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .style-control select,
+            .style-control input {
+                width: 100%;
+                padding: 8px 12px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 14px;
+                background: white;
+            }
+
+        .color-picker-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .color-value {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .font-preview {
+            font-size: 14px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Editor Panel */
+        .editor-panel {
+            padding: 20px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .template-info {
+            margin-bottom: 20px;
+        }
+
+            .template-info input {
+                width: 100%;
+                padding: 12px;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                font-size: 16px;
+                margin-bottom: 10px;
+            }
+
+        #editor {
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+            .btn-primary:hover {
+                background: #2980b9;
+            }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+            .btn-success:hover {
+                background: #219a52;
+            }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+            .btn-info:hover {
+                background: #138496;
+            }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+            .btn-warning:hover {
+                background: #e67e22;
+            }
+
+        /* Preview Panel */
+        .preview-panel {
+            background: #f8f9fa;
+            border-left: 1px solid #e9ecef;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .preview-content {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        /* Custom Quill Toolbar */
+        .ql-toolbar {
+            border-top: 1px solid #ccc;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .ql-container {
+            border-bottom: 1px solid #ccc;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            font-size: 14px;
+        }
+
+        /* Image Upload */
+        .image-upload {
+            margin: 10px 0;
+        }
+
+        .image-upload-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+            .image-upload-btn:hover {
+                background: #c0392b;
+            }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .designer-body {
+                grid-template-columns: 250px 1fr 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .designer-body {
+                grid-template-columns: 1fr;
+            }
+
+            .tools-panel, .preview-panel {
+                display: none;
+            }
+        }
+
+        /* Animation */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Placeholder List */
+        .placeholder-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .placeholder-item {
+            padding: 8px 12px;
+            margin: 5px 0;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+            .placeholder-item:hover {
+                background: #3498db;
+                color: white;
+                border-color: #3498db;
+            }
+    </style>
+</head>
+<body>
+    <div class="designer-container">
+        <div class="designer-header">
+            <h1><i class="fas fa-palette"></i> Rich Text Template Designer</h1>
+            <div class="header-actions">
+                <button class="btn btn-warning" onclick="saveAsDraft()">
+                    <i class="fas fa-save"></i> Save Draft
+                </button>
+            </div>
+        </div>
+
+        <div class="designer-body">
+            <!-- Left Tools Panel -->
+            <div class="tools-panel">
+                <!-- Text Formatting -->
+                <div class="tools-section">
+                    <h3><i class="fas fa-text-height"></i> Text Formatting</h3>
+
+                    <div class="style-control">
+                        <label>Font Family</label>
+                        <select id="fontFamily">
+                            <option value="Arial, sans-serif">Arial</option>
+                            <option value="Helvetica, sans-serif">Helvetica</option>
+                            <option value="Georgia, serif">Georgia</option>
+                            <option value="Times New Roman, serif">Times New Roman</option>
+                            <option value="Verdana, sans-serif">Verdana</option>
+                            <option value="Tahoma, sans-serif">Tahoma</option>
+                        </select>
+                    </div>
+
+                    <div class="style-control">
+                        <label>Font Size</label>
+                        <select id="fontSize">
+                            <option value="12px">12px - Small</option>
+                            <option value="14px" selected>14px - Normal</option>
+                            <option value="16px">16px - Medium</option>
+                            <option value="18px">18px - Large</option>
+                            <option value="20px">20px - X-Large</option>
+                            <option value="24px">24px - XX-Large</option>
+                        </select>
+                    </div>
+
+                    <div class="style-control">
+                        <label>Line Height</label>
+                        <select id="lineHeight">
+                            <option value="1.2">1.2 - Compact</option>
+                            <option value="1.4">1.4 - Tight</option>
+                            <option value="1.6" selected>1.6 - Normal</option>
+                            <option value="1.8">1.8 - Relaxed</option>
+                            <option value="2.0">2.0 - Loose</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Color Scheme -->
+                <div class="tools-section">
+                    <h3><i class="fas fa-palette"></i> Color Scheme</h3>
+
+                    <div class="style-control">
+                        <label>Primary Color</label>
+                        <div class="color-picker-group">
+                            <input type="color" id="primaryColor" value="#3498db" class="color-picker">
+                            <input type="text" id="primaryColorValue" value="#3498db" class="color-value">
+                        </div>
+                    </div>
+
+                    <div class="style-control">
+                        <label>Text Color</label>
+                        <div class="color-picker-group">
+                            <input type="color" id="textColor" value="#2c3e50" class="color-picker">
+                            <input type="text" id="textColorValue" value="#2c3e50" class="color-value">
+                        </div>
+                    </div>
+
+                    <div class="style-control">
+                        <label>Background Color</label>
+                        <div class="color-picker-group">
+                            <input type="color" id="backgroundColor" value="#ffffff" class="color-picker">
+                            <input type="text" id="backgroundColorValue" value="#ffffff" class="color-value">
+                        </div>
+                    </div>
+
+                    <div class="style-control">
+                        <label>Button Color</label>
+                        <div class="color-picker-group">
+                            <input type="color" id="buttonColor" value="#e74c3c" class="color-picker">
+                            <input type="text" id="buttonColorValue" value="#e74c3c" class="color-value">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layout Options -->
+                <div class="tools-section">
+                    <h3><i class="fas fa-layer-group"></i> Layout</h3>
+
+                    <div class="style-control">
+                        <label>Border Radius</label>
+                        <select id="borderRadius">
+                            <option value="0px">0px - Square</option>
+                            <option value="4px">4px - Slightly Rounded</option>
+                            <option value="8px" selected>8px - Rounded</option>
+                            <option value="12px">12px - Very Rounded</option>
+                            <option value="20px">20px - Pill</option>
+                        </select>
+                    </div>
+
+                    <div class="style-control">
+                        <label>Padding</label>
+                        <select id="padding">
+                            <option value="10px">10px - Compact</option>
+                            <option value="20px" selected>20px - Normal</option>
+                            <option value="30px">30px - Spacious</option>
+                            <option value="40px">40px - Very Spacious</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Dynamic Placeholders -->
+                <div class="tools-section">
+                    <h3><i class="fas fa-tags"></i> Dynamic Fields</h3>
+                    <div class="placeholder-list" id="placeholderList">
+                        <!-- Placeholders will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Editor Panel -->
+            <div class="editor-panel">
+                <div class="template-info">
+                    <input type="text" id="templateName" placeholder="Enter Template Name..." class="fade-in">
+                    <input type="text" id="emailSubject" placeholder="Enter Email Subject..." class="fade-in">
+                </div>
+
+                <!-- Quill Editor -->
+                <div id="editor" class="fade-in">
+                    <p>Start designing your email template here...</p>
+                    <p>You can use the toolbar above to format your text, add images, create tables, and more!</p>
+                </div>
+
+                <div class="image-upload">
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-info" onclick="document.getElementById('imageUpload').click()">
+                        <i class="fas fa-image"></i> Upload Image
+                    </button>
+                </div>
+
+                <div class="editor-actions">
+                    <button class="btn btn-primary" onclick="previewTemplate()">
+                        <i class="fas fa-eye"></i> Preview
+                    </button>
+                    <button class="btn btn-success" onclick="saveTemplate()">
+                        <i class="fas fa-check"></i> Save Template
+                    </button>
+                    <button class="btn btn-warning" onclick="saveAsOneTime()">
+                        <i class="fas fa-bolt"></i> Save as One-Time
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Preview Panel -->
+            <div class="preview-panel">
+                <div class="preview-header">
+                    <h3><i class="fas fa-desktop"></i> Live Preview</h3>
+                    <button class="btn btn-info" onclick="refreshPreview()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="preview-content" id="previewContent">
+                    <p style="text-align: center; color: #666; margin-top: 50px;">
+                        <i class="fas fa-envelope-open-text" style="font-size: 48px; margin-bottom: 20px;"></i><br>
+                        Preview will appear here
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Quill Editor with enhanced toolbar
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: {
+                    container: [
+                        [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'script': 'sub'}, { 'script': 'super' }],
+                        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'align': [] }],
+                        ['blockquote', 'code-block'],
+                        ['link', 'image', 'video'],
+                        ['clean']
+                    ],
+                    handlers: {
+                        'image': imageHandler
+                    }
+                }
+            },
+            placeholder: 'Compose your email template...',
+            formats: [
+                'bold', 'italic', 'underline', 'strike',
+                'color', 'background',
+                'font', 'size',
+                'script',
+                'header',
+                'list', 'bullet',
+                'align',
+                'blockquote', 'code-block',
+                'link', 'image', 'video'
+            ]
+        });
+
+        // Image upload handler
+        async function imageHandler() {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            input.click();
+
+            input.onchange = async function() {
+                const file = input.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/api/richtexttemplate/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const range = quill.getSelection();
+                        quill.insertEmbed(range.index, 'image', result.url);
+                    } else {
+                        alert('Failed to upload image: ' + result.errorMessage);
+                    }
+                } catch (error) {
+                    alert('Error uploading image: ' + error.message);
+                }
+            };
+        }
+
+        // Load font options
+        async function loadFontOptions() {
+            try {
+                const response = await fetch('/api/richtexttemplate/font-options');
+                const options = await response.json();
+
+                const fontSelect = document.getElementById('fontFamily');
+                fontSelect.innerHTML = '';
+
+                options.fontFamilies.forEach(font => {
+                    const option = document.createElement('option');
+                    option.value = font;
+                    option.textContent = font.split(',')[0];
+                    fontSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load font options:', error);
+            }
+        }
+
+        // Load placeholders
+        async function loadPlaceholders() {
+            const placeholders = [
+                { key: 'FirstName', displayName: 'First Name', description: 'Worker first name' },
+                { key: 'LastName', displayName: 'Last Name', description: 'Worker last name' },
+                { key: 'Email', displayName: 'Email', description: 'Worker email address' },
+                { key: 'WorkerNumber', displayName: 'Worker Number', description: 'Worker identification number' },
+                { key: 'Department', displayName: 'Department', description: 'Worker department' },
+                { key: 'CurrentDate', displayName: 'Current Date', description: 'Current date' },
+                { key: 'CompanyName', displayName: 'Company Name', description: 'Your company name' }
+            ];
+
+            const container = document.getElementById('placeholderList');
+            container.innerHTML = '';
+
+            placeholders.forEach(placeholder => {
+                const div = document.createElement('div');
+                div.className = 'placeholder-item';
+                div.innerHTML = `
+                    <strong>{${placeholder.key}}</strong>
+                    <div style="font-size: 10px; color: #666;">${placeholder.description}</div>
+                `;
+                div.onclick = () => insertPlaceholder(placeholder.key);
+                container.appendChild(div);
+            });
+        }
+
+        function insertPlaceholder(key) {
+            const range = quill.getSelection();
+            quill.insertText(range.index, `{${key}}`);
+        }
+
+        // Preview template
+        async function previewTemplate() {
+            const designOptions = getDesignOptions();
+            const htmlContent = quill.root.innerHTML;
+
+            const request = {
+                htmlContent: htmlContent,
+                designOptions: designOptions,
+                placeholderValues: {
+                    FirstName: 'John',
+                    LastName: 'Doe',
+                    Email: 'john.doe@company.com',
+                    WorkerNumber: 'EMP-001',
+                    Department: 'Human Resources',
+                    CurrentDate: new Date().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    }),
+                    CompanyName: 'Your Company'
+                }
+            };
+
+            try {
+                const response = await fetch('/api/richtexttemplate/preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+
+                const result = await response.json();
+                document.getElementById('previewContent').innerHTML = result.previewHtml;
+            } catch (error) {
+                alert('Failed to generate preview: ' + error.message);
+            }
+        }
+
+        // Save template
+        async function saveTemplate() {
+            const templateName = document.getElementById('templateName').value;
+            const subject = document.getElementById('emailSubject').value;
+
+            if (!templateName || !subject) {
+                alert('Please enter both template name and email subject');
+                return;
+            }
+
+            const designOptions = getDesignOptions();
+            const htmlContent = quill.root.innerHTML;
+
+            // Convert to plain text for alternative content
+            const plainTextResponse = await fetch('/api/richtexttemplate/convert-to-plaintext', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ htmlContent: htmlContent })
+            });
+
+            const plainTextResult = await plainTextResponse.json();
+
+            const request = {
+                templateName: templateName,
+                subject: subject,
+                htmlContent: htmlContent,
+                plainTextContent: plainTextResult.plainText,
+                designOptions: designOptions,
+                saveAsTemplate: true,
+                images: [] // You can populate this with uploaded images
+            };
+
+            try {
+                const response = await fetch('/api/richtexttemplate/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('Template saved successfully!');
+                    console.log('Template saved:', result);
+                } else {
+                    const error = await response.json();
+                    alert('Failed to save template: ' + error.error);
+                }
+            } catch (error) {
+                alert('Error saving template: ' + error.message);
+            }
+        }
+
+        // Save as one-time template
+        async function saveAsOneTime() {
+            const templateName = document.getElementById('templateName').value || `OneTime_${Date.now()}`;
+            const subject = document.getElementById('emailSubject').value || 'No Subject';
+
+            const designOptions = getDesignOptions();
+            const htmlContent = quill.root.innerHTML;
+
+            const request = {
+                templateName: templateName,
+                subject: subject,
+                htmlContent: htmlContent,
+                plainTextContent: await convertToPlainText(htmlContent),
+                designOptions: designOptions,
+                saveAsTemplate: false
+            };
+
+            try {
+                const response = await fetch('/api/richtexttemplate/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+
+                if (response.ok) {
+                    alert('One-time template created successfully!');
+                    // Optionally clear the editor
+                    quill.setText('');
+                    document.getElementById('templateName').value = '';
+                    document.getElementById('emailSubject').value = '';
+                }
+            } catch (error) {
+                alert('Error creating one-time template: ' + error.message);
+            }
+        }
+
+        // Helper functions
+        function getDesignOptions() {
+            return {
+                fontFamily: document.getElementById('fontFamily').value,
+                fontSize: document.getElementById('fontSize').value,
+                primaryColor: document.getElementById('primaryColor').value,
+                textColor: document.getElementById('textColor').value,
+                backgroundColor: document.getElementById('backgroundColor').value,
+                buttonColor: document.getElementById('buttonColor').value,
+                borderRadius: document.getElementById('borderRadius').value,
+                padding: document.getElementById('padding').value,
+                lineHeight: document.getElementById('lineHeight').value
+            };
+        }
+
+        async function convertToPlainText(html) {
+            try {
+                const response = await fetch('/api/richtexttemplate/convert-to-plaintext', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ htmlContent: html })
+                });
+                const result = await response.json();
+                return result.plainText;
+            } catch (error) {
+                console.error('Failed to convert to plain text:', error);
+                return html.replace(/<[^>]*>/g, '');
+            }
+        }
+
+        function refreshPreview() {
+            previewTemplate();
+        }
+
+        function saveAsDraft() {
+            const templateData = {
+                name: document.getElementById('templateName').value,
+                subject: document.getElementById('emailSubject').value,
+                content: quill.getContents(),
+                designOptions: getDesignOptions(),
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('templateDraft', JSON.stringify(templateData));
+            alert('Draft saved locally!');
+        }
+
+        function loadDraft() {
+            const draft = localStorage.getItem('templateDraft');
+            if (draft) {
+                const templateData = JSON.parse(draft);
+                document.getElementById('templateName').value = templateData.name || '';
+                document.getElementById('emailSubject').value = templateData.subject || '';
+                quill.setContents(templateData.content);
+
+                // Apply design options
+                const options = templateData.designOptions;
+                if (options) {
+                    document.getElementById('fontFamily').value = options.fontFamily;
+                    document.getElementById('fontSize').value = options.fontSize;
+                    document.getElementById('primaryColor').value = options.primaryColor;
+                    document.getElementById('textColor').value = options.textColor;
+                    document.getElementById('backgroundColor').value = options.backgroundColor;
+                    document.getElementById('buttonColor').value = options.buttonColor;
+                    document.getElementById('borderRadius').value = options.borderRadius;
+                    document.getElementById('padding').value = options.padding;
+                    document.getElementById('lineHeight').value = options.lineHeight;
+                }
+
+                updateColorValues();
+            }
+        }
+
+        // Color picker value synchronization
+        function updateColorValues() {
+            document.getElementById('primaryColorValue').value = document.getElementById('primaryColor').value;
+            document.getElementById('textColorValue').value = document.getElementById('textColor').value;
+            document.getElementById('backgroundColorValue').value = document.getElementById('backgroundColor').value;
+            document.getElementById('buttonColorValue').value = document.getElementById('buttonColor').value;
+        }
+
+        // Event listeners for color pickers
+        document.getElementById('primaryColor').addEventListener('input', function() {
+            document.getElementById('primaryColorValue').value = this.value;
+            previewTemplate();
+        });
+
+        document.getElementById('textColor').addEventListener('input', function() {
+            document.getElementById('textColorValue').value = this.value;
+            previewTemplate();
+        });
+
+        document.getElementById('backgroundColor').addEventListener('input', function() {
+            document.getElementById('backgroundColorValue').value = this.value;
+            previewTemplate();
+        });
+
+        document.getElementById('buttonColor').addEventListener('input', function() {
+            document.getElementById('buttonColorValue').value = this.value;
+            previewTemplate();
+        });
+
+        // Event listeners for other design controls
+        const designControls = ['fontFamily', 'fontSize', 'lineHeight', 'borderRadius', 'padding'];
+        designControls.forEach(control => {
+            document.getElementById(control).addEventListener('change', previewTemplate);
+        });
+
+        // Image upload handler
+        document.getElementById('imageUpload').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            await imageHandler(file);
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFontOptions();
+            loadPlaceholders();
+            loadDraft();
+            updateColorValues();
+
+            // Auto-preview after a short delay
+            setTimeout(previewTemplate, 1000);
+        });
+    </script>
+</body>
+</html>

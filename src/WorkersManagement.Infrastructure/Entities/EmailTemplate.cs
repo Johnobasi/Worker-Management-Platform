@@ -20,38 +20,42 @@ namespace WorkersManagement.Infrastructure.Entities
         [Required]
         public string HtmlContent { get; set; } = string.Empty;
 
-        public string StylesJson { get; set; } = string.Empty;
+        public string PlainTextContent { get; set; } = string.Empty;
 
-        public string PlaceholdersJson { get; set; } = string.Empty;
+        public string DesignOptionsJson { get; set; } = string.Empty;
 
-        public string TemplateType { get; set; } = "Custom";
+        public string ImagesJson { get; set; } = string.Empty;
+
+        public string TemplateType { get; set; } = "RichText";
 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public bool IsActive { get; set; } = true;
+        public bool IsOneTimeTemplate { get; set; } = false;
 
-        public TemplateStyles GetStyles()
+        public TemplateDesignOptions GetDesignOptions()
         {
-            return string.IsNullOrEmpty(StylesJson)
-                ? new TemplateStyles()
-                : JsonSerializer.Deserialize<TemplateStyles>(StylesJson) ?? new TemplateStyles();
+            return string.IsNullOrEmpty(DesignOptionsJson)
+                ? new TemplateDesignOptions()
+                : JsonSerializer.Deserialize<TemplateDesignOptions>(DesignOptionsJson) ?? new TemplateDesignOptions();
         }
 
-        public void SetStyles(TemplateStyles styles)
+        public void SetDesignOptions(TemplateDesignOptions options)
         {
-            StylesJson = JsonSerializer.Serialize(styles);
+            DesignOptionsJson = JsonSerializer.Serialize(options);
         }
 
-        public List<TemplatePlaceholder> GetPlaceholders()
+        public List<TemplateImageDto> GetImages()
         {
-            return string.IsNullOrEmpty(PlaceholdersJson)
-                ? new List<TemplatePlaceholder>()
-                : JsonSerializer.Deserialize<List<TemplatePlaceholder>>(PlaceholdersJson) ?? new List<TemplatePlaceholder>();
+            return string.IsNullOrEmpty(ImagesJson)
+                ? new List<TemplateImageDto>()
+                : JsonSerializer.Deserialize<List<TemplateImageDto>>(ImagesJson) ?? new List<TemplateImageDto>();
         }
 
-        public void SetPlaceholders(List<TemplatePlaceholder> placeholders)
+        public void SetImages(List<TemplateImageDto> images)
         {
-            PlaceholdersJson = JsonSerializer.Serialize(placeholders);
+            ImagesJson = JsonSerializer.Serialize(images);
         }
     }
 }
+

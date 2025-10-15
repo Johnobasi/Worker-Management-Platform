@@ -1,119 +1,120 @@
 ﻿using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
 
 namespace WorkersManagement.Infrastructure.EmailComposerDtos
 {
+    public class RichTextTemplateRequestDto
+    {
+        public string TemplateName { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
+        public string HtmlContent { get; set; } = string.Empty;
+        public string PlainTextContent { get; set; } = string.Empty;
+        public TemplateDesignOptions DesignOptions { get; set; } = new();
+        public bool SaveAsTemplate { get; set; } = true;
+        public List<TemplateImageDto> Images { get; set; } = new();
+    }
+
     public class BulkEmailDto
     {
+        [Required]
+        public List<string> RecipientEmails { get; set; } = new List<string>();
+
+        [Required]
         public string Subject { get; set; } = string.Empty;
+
+        [Required]
         public string Body { get; set; } = string.Empty;
-        public bool IsHtml { get; set; } = true;
-        public List<string> RecipientEmails { get; set; } = new();
-        public List<EmailAttachmentDto> Attachments { get; set; } = new();
+
+        public List<EmailAttachmentDto>? Attachments { get; set; }
     }
 
     public class EmailAttachmentDto
     {
         public string FileName { get; set; } = string.Empty;
         public byte[] Content { get; set; } = Array.Empty<byte>();
-        public string ContentType { get; set; } = string.Empty;
+        public string ContentType { get; set; } = "application/octet-stream";
     }
-
-    public class EmailTemplateDto
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public string Body { get; set; } = string.Empty;
-        public string TemplateType { get; set; } = "Html";
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-        public bool IsActive { get; set; } = true;
-    }
-
-    public class SendEmailRequestDto
-    {
-        public Guid? TemplateId { get; set; }
-        public string Subject { get; set; } = string.Empty;
-        public string Body { get; set; } = string.Empty;
-        public List<Guid> SelectedWorkerIds { get; set; } = new();
-        public bool SendToAll { get; set; } = true;
-        public List<IFormFile> Attachments { get; set; }
-    }
-
-    // Template Designer DTOs
-    public class TemplateDesignRequestDto
-    {
-        public string TemplateName { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public string HtmlContent { get; set; } = string.Empty;
-        public TemplateStyles Styles { get; set; } = new();
-        public List<TemplatePlaceholder> Placeholders { get; set; } = new();
-        public bool SaveAsTemplate { get; set; }
-    }
-
-    public class TemplateStyles
+    public class TemplateDesignOptions
     {
         public string FontFamily { get; set; } = "Arial, sans-serif";
         public string FontSize { get; set; } = "14px";
         public string PrimaryColor { get; set; } = "#2563eb";
-        public string SecondaryColor { get; set; } = "#6b7280";
         public string BackgroundColor { get; set; } = "#ffffff";
-        public string HeaderColor { get; set; } = "#1f2937";
+        public string TextColor { get; set; } = "#333333";
+        public string HeadingColor { get; set; } = "#1f2937";
+        public string LinkColor { get; set; } = "#2563eb";
+        public string BorderColor { get; set; } = "#e5e7eb";
         public string ButtonColor { get; set; } = "#2563eb";
         public string ButtonTextColor { get; set; } = "#ffffff";
         public string BorderRadius { get; set; } = "8px";
+        public string Padding { get; set; } = "20px";
+        public string Margin { get; set; } = "10px";
+        public string LineHeight { get; set; } = "1.6";
+        public string HeaderBackground { get; set; } = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+        public string FooterBackground { get; set; } = "#f8f9fa";
+        public string SecondaryColor { get; set; } = "#ffffff";
     }
 
-    public class TemplatePlaceholder
+    public class TemplateImageDto
     {
-        public string Key { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string DefaultValue { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string ContentType { get; set; } = string.Empty;
+        public string Base64Data { get; set; } = string.Empty;
+        public long Size { get; set; }
     }
 
-    public class TemplateDesignResponseDto
+    public class RichTextTemplateResponseDto
     {
         public Guid TemplateId { get; set; }
         public string TemplateName { get; set; } = string.Empty;
+        public string Subject { get; set; } = string.Empty;
         public string PreviewHtml { get; set; } = string.Empty;
+        public string HtmlContent { get; set; } = string.Empty;
+        public TemplateDesignOptions DesignOptions { get; set; } = new();
         public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
     }
 
     public class TemplatePreviewRequestDto
     {
         public string HtmlContent { get; set; } = string.Empty;
-        public TemplateStyles Styles { get; set; } = new();
+        public string PlainTextContent { get; set; } = string.Empty;
+        public TemplateDesignOptions DesignOptions { get; set; } = new();
         public Dictionary<string, string> PlaceholderValues { get; set; } = new();
     }
 
-    // Email Composer DTOs
-    public class EmailComposerRequestDto
+    public class FontOptionsDto
     {
-        public Guid? TemplateId { get; set; }
-        public string Subject { get; set; } = string.Empty;
-        public string From { get; set; } = string.Empty;
-        public List<string> To { get; set; } = new();
-        public string Body { get; set; } = string.Empty;
-        public string LogoUrl { get; set; } = string.Empty;
-        public bool SendToAllWorkers { get; set; }
-        public List<Guid> SelectedWorkerIds { get; set; } = new();
-        public List<IFormFile> Attachments { get; set; }
+        public List<string> FontFamilies { get; set; } = new()
+        {
+            "Arial, sans-serif",
+            "Helvetica, sans-serif",
+            "Georgia, serif",
+            "Times New Roman, serif",
+            "Verdana, sans-serif",
+            "Tahoma, sans-serif",
+            "Trebuchet MS, sans-serif",
+            "Courier New, monospace",
+            "Brush Script MT, cursive",
+            "Comic Sans MS, cursive"
+        };
+
+        public List<string> FontSizes { get; set; } = new()
+        {
+            "8px", "9px", "10px", "11px", "12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "36px", "48px", "72px"
+        };
+
+        public List<string> HeadingSizes { get; set; } = new()
+        {
+            "h1", "h2", "h3", "h4", "h5", "h6"
+        };
     }
 
-    public class EmailComposerResponseDto
+    public class UploadImageResponseDto
     {
-        public Guid ComposerId { get; set; }
-        public string PreviewHtml { get; set; } = string.Empty;
-        public int RecipientCount { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
-
-    public class TemplateListItemDto
-    {
-        public Guid Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public DateTime UpdatedAt { get; set; }
+        public bool Success { get; set; }
+        public string FileName { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
+        public string ErrorMessage { get; set; } = string.Empty;
     }
 }

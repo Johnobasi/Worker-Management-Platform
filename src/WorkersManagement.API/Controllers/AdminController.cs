@@ -188,6 +188,48 @@ namespace WorkersManagement.API.Controllers
         }
 
 
+        [HttpPost("selected-workers")]
+        [Authorize(Policy = "Admin")]
+        public async Task<IActionResult> GetSelectedWorkers([FromBody] SelectedWorkersRequest request)
+        {
+            try
+            {
+                if (request?.SelectedWorkerIds == null || !request.SelectedWorkerIds.Any())
+                {
+                    return BadRequest("No worker IDs provided");
+                }
+
+                var allWorkers = await _workersRepository.GetAllWorkersAsync();
+                var selectedWorkers = allWorkers
+                    .Where(worker => request.SelectedWorkerIds.Contains(worker.Id))
+                    .ToList();
+
+                if (!selectedWorkers.Any())
+                {
+                    _logger.LogWarning("No workers found with the provided IDs");
+                    return NotFound("No workers found with the provided IDs");
+                }
+
+                // Return only email addresses for recipient field
+                var selectedEmails = selectedWorkers
+                    .Select(worker => worker.Email)
+                    .ToList();
+
+                _logger.LogInformation("Fetched {Count} selected workers successfully", selectedEmails.Count);
+                return Ok(selectedEmails);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving selected workers");
+                return StatusCode(500, "An error occurred while retrieving the selected workers.");
+            }
+        }
+
+        public class SelectedWorkersRequest
+        {
+            public List<Guid> SelectedWorkerIds { get; set; } = new List<Guid>();
+        }
+
         [HttpPut("update-worker/{id}")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UpdateWorkerAsync(Guid id, [FromBody] UpdateWorkersDto request)

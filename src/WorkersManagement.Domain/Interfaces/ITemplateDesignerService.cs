@@ -1,18 +1,18 @@
-﻿using WorkersManagement.Infrastructure.EmailComposerDtos;
+﻿using Microsoft.AspNetCore.Http;
+using WorkersManagement.Infrastructure.EmailComposerDtos;
 
 namespace WorkersManagement.Domain.Interfaces
 {
     public interface ITemplateDesignerService
     {
-        Task<TemplateDesignResponseDto> CreateTemplateAsync(TemplateDesignRequestDto request);
-        Task<TemplateDesignResponseDto> UpdateTemplateAsync(Guid templateId, TemplateDesignRequestDto request);
-        Task<List<TemplateDesignResponseDto>> GetAllTemplatesAsync();
-        Task<TemplateDesignResponseDto> GetTemplateAsync(Guid templateId);
+        Task<RichTextTemplateResponseDto> CreateTemplateAsync(RichTextTemplateRequestDto request);
+        Task<RichTextTemplateResponseDto> UpdateTemplateAsync(Guid templateId, RichTextTemplateRequestDto request);
+        Task<List<RichTextTemplateResponseDto>> GetAllTemplatesAsync();
+        Task<RichTextTemplateResponseDto> GetTemplateAsync(Guid templateId);
         Task<bool> DeleteTemplateAsync(Guid templateId);
-        Task<string> GeneratePreviewAsync(TemplatePreviewRequestDto request);
-        Task<string> ApplyPlaceholdersAsync(string htmlContent, Dictionary<string, string> placeholders);
-        Task<EmailTemplateDto> GetEmailTemplateAsync(string templateName);
-        Task<EmailTemplateDto> SaveEmailTemplateAsync(EmailTemplateDto templateDto);
-        Task<List<EmailTemplateDto>> GetAllEmailTemplatesAsync();
+        string GeneratePreview(TemplatePreviewRequestDto request);
+        Task<UploadImageResponseDto> UploadTemplateImageAsync(IFormFile file);
+        Task<FontOptionsDto> GetFontOptionsAsync();
+        Task<string> ConvertToPlainTextAsync(string htmlContent);
     }
 }
