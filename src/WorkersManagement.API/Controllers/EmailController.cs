@@ -5,9 +5,13 @@ using WorkersManagement.Infrastructure.EmailComposerDtos;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Email management endpoints for sending bulk emails
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [Produces("application/json")]
     public class EmailController : ControllerBase
     {
         private readonly IEmailService _emailService;
@@ -19,6 +23,36 @@ namespace WorkersManagement.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Send bulk email to multiple recipients
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        /// 
+        ///     POST /api/email/send
+        ///     {
+        ///         "subject": "Important Update",
+        ///         "body": "Dear user, please be advised of the following update...",
+        ///         "recipientEmails": [
+        ///             "user1@example.com",
+        ///             "user2@example.com"
+        ///         ],
+        ///         "isHtml": true,
+        ///         "ccEmails": [
+        ///             "manager@example.com"
+        ///         ],
+        ///         "bccEmails": [
+        ///             "archive@example.com"
+        ///         ]
+        ///     }
+        /// </remarks>
+        /// <param name="emailDto">Email data including subject, body, and recipient list</param>
+        /// <returns>Result of the bulk email operation</returns>
+        /// <response code="200">All emails sent successfully</response>
+        /// <response code="207">Some emails failed to send (partial success)</response>
+        /// <response code="400">Invalid request parameters</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="500">Internal server error</response>
         [HttpPost("send")]
         [AllowAnonymous]
         public async Task<IActionResult> SendEmail([FromBody] BulkEmailDto emailDto)

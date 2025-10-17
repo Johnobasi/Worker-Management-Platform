@@ -7,6 +7,9 @@ using WorkersManagement.Infrastructure.Entities;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Manage devotional files and distribution
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -26,6 +29,11 @@ namespace WorkersManagement.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Upload new devotional file (replaces existing ones)
+        /// </summary>
+        /// <param name="request">Devotional file and data</param>
+        /// <returns>Upload result</returns>
         [HttpPost("upload-devotionals")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UploadDevotional([FromForm] UploadDevotionalRequest request)
@@ -97,7 +105,11 @@ namespace WorkersManagement.API.Controllers
             
         }
 
-
+        /// <summary>
+        /// Download devotional file
+        /// </summary>
+        /// <param name="id">Devotional identifier</param>
+        /// <returns>Devotional file</returns>
         [HttpGet("download/{id}")]
         [Authorize(Policy = "Worker")]
         public async Task<IActionResult> DownloadDevotional(Guid id)
@@ -125,7 +137,10 @@ namespace WorkersManagement.API.Controllers
 
         }
 
-
+        /// <summary>
+        /// Get all available devotionals
+        /// </summary>
+        /// <returns>List of devotionals</returns>
         [HttpGet("get-all-devotionals")]
         [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetAllDevotionals()
@@ -142,7 +157,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
-
+        /// <summary>
+        /// Delete devotional file
+        /// </summary>
+        /// <param name="id">Devotional identifier</param>
+        /// <returns>Delete result</returns>
         [HttpDelete("delete-devotional/{id}")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> DeleteDevotional(Guid id)
@@ -167,7 +186,5 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while deleting the devotional.");
             }
         }
-
-
     }
 }

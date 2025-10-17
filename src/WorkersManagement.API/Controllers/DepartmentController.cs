@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+﻿using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure.Entities;
-using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Manage departments and their associations with teams
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class DepartmentController : ControllerBase
@@ -25,6 +25,10 @@ namespace WorkersManagement.API.Controllers
             _subTeamRepository = subTeamRepository;
         }
 
+        /// <summary>
+        /// Get all departments with team information
+        /// </summary>
+        /// <returns>List of all departments</returns>
         [HttpGet("all-departments")]
         public async Task<IActionResult> GetAllDepartmentsAsync()
         {
@@ -51,8 +55,12 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while retrieving departments.");
             }
         }
-    
 
+        /// <summary>
+        /// Create a new department
+        /// </summary>
+        /// <param name="req">Department creation data</param>
+        /// <returns>Newly created department</returns>
         [HttpPost("add-department")]
         public async Task<IActionResult> AddDepartment([FromBody] CreateDepartmenDto req)
         {
@@ -116,6 +124,11 @@ namespace WorkersManagement.API.Controllers
            
         }
 
+        /// <summary>
+        /// Get department details by name
+        /// </summary>
+        /// <param name="departmentName">Department name</param>
+        /// <returns>Department information</returns>
         [HttpGet("get-department/{departmentName}")]
         public async Task<IActionResult> GetDepartmentNameAsync(string departmentName)
         {
@@ -145,6 +158,12 @@ namespace WorkersManagement.API.Controllers
 
         }
 
+        /// <summary>
+        /// Update department information
+        /// </summary>
+        /// <param name="id">Department identifier</param>
+        /// <param name="updatedDepartment">Updated department data</param>
+        /// <returns>Update result</returns>
         [HttpPut("update-department/{id}")]
         public async Task<IActionResult> UpdateDepartmentAsync(Guid id, [FromBody] UpdateDepartmentDto updatedDepartment)
         {
@@ -173,6 +192,11 @@ namespace WorkersManagement.API.Controllers
 
         }
 
+        /// <summary>
+        /// Delete a department
+        /// </summary>
+        /// <param name="id">Department identifier</param>
+        /// <returns>Delete result</returns>
         [HttpDelete("delete-department/{id}")]
         public async Task<IActionResult> DeleteDepartmentAsync(Guid id)
         {

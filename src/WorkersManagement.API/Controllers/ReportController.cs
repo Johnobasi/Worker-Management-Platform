@@ -6,6 +6,9 @@ using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Generate and export worker activity reports
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -19,6 +22,15 @@ namespace WorkersManagement.API.Controllers
             _habitRepository = habitRepository;
         }
 
+        /// <summary>
+        /// Get worker activity summary as CSV
+        /// </summary>
+        /// <param name="isAdmin">Admin access flag</param>
+        /// <param name="startDate">Report start date</param>
+        /// <param name="endDate">Report end date</param>
+        /// <param name="teamName">Filter by team name</param>
+        /// <param name="departmentName">Filter by department name</param>
+        /// <returns>CSV file with worker activity data</returns>
         [HttpGet("worker-activity-summary")]
         [Authorize(Policy = "HOD")]
         public async Task<IActionResult> GetWorkerActivitySummary(
@@ -85,6 +97,15 @@ namespace WorkersManagement.API.Controllers
             return File(Encoding.UTF8.GetBytes(csv), "text/csv", $"worker_activity_summary_{DateTime.UtcNow:yyyyMMdd}.csv");
         }
 
+        /// <summary>
+        /// Export detailed attendance and habit report
+        /// </summary>
+        /// <param name="isAdmin">Admin access flag</param>
+        /// <param name="startDate">Report start date</param>
+        /// <param name="endDate">Report end date</param>
+        /// <param name="teamName">Filter by team name</param>
+        /// <param name="departmentName">Filter by department name</param>
+        /// <returns>CSV file with detailed attendance and habit data</returns>
         [HttpGet("export-attendance")]
         [Authorize(Policy = "HOD")]
         public async Task<IActionResult> ExportAttendanceReport(
@@ -153,6 +174,14 @@ namespace WorkersManagement.API.Controllers
             return File(Encoding.UTF8.GetBytes(combined), "text/csv", $"attendance_report_{DateTime.UtcNow:yyyyMMdd}.csv");
         }
 
+
+        /// <summary>
+        /// Export department and team summary report
+        /// </summary>
+        /// <param name="isAdmin">Admin access flag</param>
+        /// <param name="startDate">Report start date</param>
+        /// <param name="endDate">Report end date</param>
+        /// <returns>CSV file with department and team summaries</returns>
         [HttpGet("export-summary")]
         [Authorize(Policy = "HOD")]
         public async Task<IActionResult> ExportWorkerSummaryReport(

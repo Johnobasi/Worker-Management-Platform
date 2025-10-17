@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+﻿using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
-using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Manage team operations and organization structure
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class TeamController : ControllerBase
@@ -24,6 +24,11 @@ namespace WorkersManagement.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Create a new team
+        /// </summary>
+        /// <param name="request">Team creation data</param>
+        /// <returns>Newly created team</returns>
         [HttpPost("create-team")]
         public async Task<IActionResult> CreateTeam([FromBody] CreateTeamDto request)
         {
@@ -54,6 +59,10 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get all teams with department information
+        /// </summary>
+        /// <returns>List of all teams</returns>
         [HttpGet("get-teams")]
         public async Task<IActionResult> GetTeamsAsync()
         {
@@ -76,7 +85,11 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while retrieving teams.");
             }
         }
-
+        /// <summary>
+        /// Get team details by name
+        /// </summary>
+        /// <param name="teamName">Team name</param>
+        /// <returns>Team information</returns>
         [HttpGet("get-teams/{teamName}")]
         public async Task<IActionResult> GetTeamByIdAsync(string teamName)
         {
@@ -94,7 +107,12 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while retrieving the team.");
             }
         }
-
+        /// <summary>
+        /// Update team information
+        /// </summary>
+        /// <param name="id">Team identifier</param>
+        /// <param name="updatedTeam">Updated team data</param>
+        /// <returns>Update result</returns>
         [HttpPut("update-team/{id}")]
         public async Task<IActionResult> UpdateTeamAsync(Guid id, [FromBody] UpdateTeamDto updatedTeam)
         {
@@ -122,6 +140,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete a team
+        /// </summary>
+        /// <param name="id">Team identifier</param>
+        /// <returns>Delete result</returns>
         [HttpDelete("delete-team/{id}")]
         public async Task<IActionResult> DeleteTeamAsync(Guid id)
         {

@@ -9,8 +9,12 @@ using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Administrative endpoints for worker management operations
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Produces("application/json")]
     //[Authorize]
     public class AdminController : ControllerBase
     {
@@ -24,8 +28,32 @@ namespace WorkersManagement.API.Controllers
             _logger = logger;
         }
 
-        [HttpPost("create-worker")]
+
+        /// <summary>
+        /// Create a new worker
+        /// </summary>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     POST /api/admin/create-worker
+        ///     FormData:
+        ///     - Email: "john.doe@company.com"
+        ///     - FirstName: "John"
+        ///     - LastName: "Doe"
+        ///     - DepartmentName: "Engineering"
+        ///     - Role: ["Worker", "TeamLead"]
+        ///     - ProfilePicture: [file]
+        ///
+        /// </remarks>
+        /// <param name="dto">Worker creation data</param>
+        /// <returns>Newly created worker details</returns>
+        /// <response code="201">Worker created successfully</response>
+        /// <response code="400">Invalid input data or department not found</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="403">Forbidden - Insufficient permissions</response>
+        /// <response code="500">Internal server error</response>
         //[Authorize(Policy = "CanCreateWorkers")]
+        [HttpPost("create-worker")]
         public async Task<IActionResult> CreateWorker([FromForm] CreateNewWorkerDto dto)
         {
             if (!ModelState.IsValid)
@@ -50,8 +78,29 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
-        [HttpPost("upload-workers")]
+
+        /// <summary>
+        /// Create bulk workers from Excel file upload
+        /// </summary>
+        /// <remarks>
+        /// Sample Excel format:
+        /// 
+        /// | Email | FirstName | LastName | DepartmentName | Role |
+        /// |-------|-----------|----------|----------------|------|
+        /// | john@email.com | John | Doe | Engineering | Worker,TeamLead |
+        /// | jane@email.com | Jane | Smith | Marketing | Worker |
+        /// 
+        /// Required columns: Email, FirstName, LastName, DepartmentName, Role
+        /// </remarks>
+        /// <param name="file">Excel file (.xlsx) containing worker data</param>
+        /// <returns>Bulk upload results with success/failure details</returns>
+        /// <response code="200">Bulk upload completed with results</response>
+        /// <response code="400">Invalid file or no data found</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="403">Forbidden - Insufficient permissions</response>
+        /// <response code="500">Internal server error</response>
         //[Authorize(Policy = "CanCreateWorkers")]
+        [HttpPost("upload-workers")]
         public async Task<IActionResult> UploadWorkers(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -123,6 +172,16 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete a worker by ID
+        /// </summary>
+        /// <param name="id">Worker ID</param>
+        /// <returns>Success message</returns>
+        /// <response code="200">Worker deleted successfully</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="403">Forbidden - SuperAdmin role required</response>
+        /// <response code="404">Worker not found</response>
+        /// <response code="500">Internal server error</response>
         [HttpDelete("delete-worker/{id}")]
         [Authorize(Policy = "SuperAdmin")]
         public async Task<IActionResult> DeleteWorker(Guid id)
@@ -141,6 +200,20 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get paginated list of all workers
+        /// </summary>
+        /// <param name="pageNumber">Page number (default: 1)</param>
+        /// <param name="pageSize">Number of items per page (default: 20, max: 100)</param>
+        /// <returns>Paginated list of workers</returns>
+        /// <response code="200">Workers retrieved successfully</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="500">Internal server error</response>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpGet("get-workers")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> GetAllWorkers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
@@ -178,6 +251,21 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get worker by ID
+        /// </summary>
+        /// <param name="id">Worker ID</param>
+        /// <returns>Worker details</returns>
+        /// <response code="200">Worker retrieved successfully</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="403">Forbidden - Workers can only view their own profile</response>
+        /// <response code="404">Worker not found</response>
+        /// <response code="500">Internal server error</response>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpGet("workers/{id}")]
         [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetWorkerById(Guid id)
@@ -205,7 +293,26 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
-
+        /// <summary>
+        /// Get email addresses of selected workers
+        /// </summary>
+        /// <remarks>
+        /// Used for bulk email operations by providing worker IDs
+        /// </remarks>
+        /// <param name="request">List of worker IDs</param>
+        /// <returns>List of email addresses</returns>
+        /// <response code="200">Email addresses retrieved successfully</response>
+        /// <response code="400">No worker IDs provided</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="404">No workers found with provided IDs</response>
+        /// <response code="500">Internal server error</response>
+        [ProducesResponseType(typeof(List<string>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpPost("selected-workers")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> GetSelectedWorkers([FromBody] SelectedWorkersRequest request)
@@ -243,11 +350,36 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Request for selected workers operation
+        /// </summary>
         public class SelectedWorkersRequest
         {
+            /// <summary>
+            /// List of worker IDs to retrieve
+            /// </summary>
+            /// <example>["3fa85f64-5717-4562-b3fc-2c963f66afa6", "4fa85f64-5717-4562-b3fc-2c963f66afa7"]</example>
             public List<Guid> SelectedWorkerIds { get; set; } = new List<Guid>();
         }
 
+        /// <summary>
+        /// Update worker information
+        /// </summary>
+        /// <param name="id">Worker ID</param>
+        /// <param name="request">Updated worker data</param>
+        /// <returns>Success message</returns>
+        /// <response code="200">Worker updated successfully</response>
+        /// <response code="400">Invalid input data or department not found</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="403">Forbidden - Insufficient permissions or department access</response>
+        /// <response code="404">Worker not found</response>
+        /// <response code="500">Internal server error</response>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpPut("update-worker/{id}")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UpdateWorkerAsync(Guid id, [FromBody] UpdateWorkersDto request)

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
 using WorkersManagement.Core;
@@ -116,6 +117,12 @@ namespace WorkersManagement.API
                         Array.Empty<string>()
                     }
                 });
+
+                // Enable XML comments for better documentation
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                options.IncludeXmlComments(xmlPath);
+
                 options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
                 {
                     Title = "Workers Attendance API",
@@ -123,7 +130,7 @@ namespace WorkersManagement.API
                     Description = "CRM API for managing workers.",
                     Contact = new Microsoft.OpenApi.Models.OpenApiContact
                     {
-                        Name = "Harvesters London Campus",
+                        Name = "Harvesters UK",
                         Email = "support@example.com",
                         Url = new Uri("https://yourcompany.com")
                     },

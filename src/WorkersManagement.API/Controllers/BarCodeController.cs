@@ -4,6 +4,9 @@ using WorkersManagement.Domain.Interfaces;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Manage barcode generation and assignment for workers
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -17,6 +20,11 @@ namespace WorkersManagement.API.Controllers
                 _logger = logger;
         }
 
+        /// <summary>
+        /// Generate and download barcode for a worker
+        /// </summary>
+        /// <param name="workerId">Worker identifier</param>
+        /// <returns>Barcode image file</returns>
         [HttpGet("generate-download-barcode/{workerId}")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> DownloadWorkerBarcode(Guid workerId)
@@ -34,6 +42,12 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Assign a barcode to a worker
+        /// </summary>
+        /// <param name="qrCodeId">Barcode identifier</param>
+        /// <param name="workerId">Worker identifier</param>
+        /// <returns>Assignment result</returns>
         [HttpPut("assign-worker-barcode")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> AssignUserToQRCode([FromQuery] Guid qrCodeId, [FromQuery] Guid workerId)
@@ -41,7 +55,7 @@ namespace WorkersManagement.API.Controllers
             try
             {
                 await _barcodeRepository.AssignWorkerToBarCodeAsync(qrCodeId, workerId);
-                _logger.LogInformation($"Assigned QR code {qrCodeId} to worker {workerId}");
+                _logger.LogInformation("Assigned QR code {qrCodeId} to worker {workerId}", qrCodeId,workerId);
                 return NoContent();
             }
             catch (ArgumentException ex)
@@ -56,6 +70,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Disable barcode for a worker
+        /// </summary>
+        /// <param name="workerId">Worker identifier</param>
+        /// <returns>Disable result</returns>
         [HttpDelete("disable-worker-barcode/{workerId}")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> DisableWorkerQRCodes(Guid workerId)
@@ -63,7 +82,7 @@ namespace WorkersManagement.API.Controllers
             try
             {
                 await _barcodeRepository.DisableBarCodeAsync(workerId);
-                _logger.LogInformation($"Disabled QR codes for worker {workerId}");
+                _logger.LogInformation("Disabled QR codes for worker {workerId}", workerId);
                 return NoContent();
             }
             catch (Exception ex)
@@ -73,6 +92,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get barcode details by ID
+        /// </summary>
+        /// <param name="qrCodeId">Barcode identifier</param>
+        /// <returns>Barcode information</returns>
         [HttpGet("get-worker-barcode/{qrCodeId}")]
         [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetById(Guid qrCodeId)
@@ -80,11 +104,11 @@ namespace WorkersManagement.API.Controllers
             var qrCode = await _barcodeRepository.GetBarCodeByIdAsync(qrCodeId);
             if (qrCode == null)
             {
-                _logger.LogWarning($"QR code {qrCodeId} not found.");
+                _logger.LogWarning("QR code {qrCodeId} not found.", qrCodeId);
                 return NotFound("QR code not found.");
             }
 
-            _logger.LogInformation($"Retrieved QR code {qrCodeId}");
+            _logger.LogInformation("Retrieved QR code {qrCodeId}", qrCodeId);
             return Ok(qrCode);
         }
 

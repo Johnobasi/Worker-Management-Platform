@@ -6,7 +6,9 @@ using WorkersManagement.Domain.Interfaces;
 namespace WorkersManagement.API.Controllers
 {
 
-
+    /// <summary>
+    /// Handle worker authentication and password management
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -15,6 +17,11 @@ namespace WorkersManagement.API.Controllers
         private readonly IWorkersAuthRepository _authRepository = authRepository;
         private readonly ILogger<WorkerAuthController> _logger = logger;
 
+        /// <summary>
+        /// Authenticate worker and generate token
+        /// </summary>
+        /// <param name="dto">Login credentials</param>
+        /// <returns>Authentication token</returns>
         [HttpPost("worker-login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -34,6 +41,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Logout worker
+        /// </summary>
+        /// <param name="dto">Logout request</param>
+        /// <returns>Logout confirmation</returns>
         [HttpPost("worker-logout")]
         [AllowAnonymous]
         public async Task<IActionResult> Logout([FromBody] LogoutRequestDto dto)
@@ -53,6 +65,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Request password reset token
+        /// </summary>
+        /// <param name="dto">Password reset request</param>
+        /// <returns>Reset token confirmation</returns>
         [HttpPost("request-password-reset")]
         [AllowAnonymous]
         public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordResetRequestDto dto)
@@ -73,7 +90,11 @@ namespace WorkersManagement.API.Controllers
         }
 
 
-
+        /// <summary>
+        /// Initiate password reset process
+        /// </summary>
+        /// <param name="dto">Forgot password request</param>
+        /// <returns>Reset initiation confirmation</returns>
         [HttpPost("forgot-password")]
         [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
@@ -94,6 +115,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Verify password reset token
+        /// </summary>
+        /// <param name="dto">Token verification data</param>
+        /// <returns>Token verification result</returns>
         [HttpPost("verify-token")]
         [AllowAnonymous]
         public async Task<IActionResult> VerifyToken([FromBody] VerifyTokenDto dto)
@@ -114,6 +140,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Reset password using verified token
+        /// </summary>
+        /// <param name="dto">Password reset data</param>
+        /// <returns>Password reset confirmation</returns>
         [HttpPost("reset-password")]
         [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)

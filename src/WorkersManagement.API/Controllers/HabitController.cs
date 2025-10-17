@@ -10,6 +10,9 @@ using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Manage worker habits and completion tracking
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -19,6 +22,10 @@ namespace WorkersManagement.API.Controllers
         private readonly ILogger<HabitController> _logger = logger;
         private readonly IHabitCompletionRepository _habitCompletionRepository = habitCompletionRepository;
 
+        /// <summary>
+        /// Get all habits
+        /// </summary>
+        /// <returns>List of all habits</returns>
         [HttpGet("get-habits")]
         [Authorize(Policy = "Worker")]
         public async Task<IActionResult> GetAllAsync()
@@ -28,6 +35,11 @@ namespace WorkersManagement.API.Controllers
             return Ok(allHabits);
         }
 
+        /// <summary>
+        /// Add a new habit
+        /// </summary>
+        /// <param name="request">Habit creation data</param>
+        /// <returns>Add result</returns>
         [HttpPost("add-habit")]
         [Authorize(Policy = "Worker")]
         public async Task<IActionResult> AddHabit([FromBody] AddHabitRequest request)
@@ -57,6 +69,12 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Update habit information
+        /// </summary>
+        /// <param name="id">Habit identifier</param>
+        /// <param name="dto">Updated habit data</param>
+        /// <returns>Update result</returns>
         [HttpPut("update-habit/{id}")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> UpdateHabitAsync(Guid id, [FromBody] UpdateHabitDto dto)
@@ -95,6 +113,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete a habit
+        /// </summary>
+        /// <param name="id">Habit identifier</param>
+        /// <returns>Delete result</returns>
         [HttpDelete("delete-habit/{id}")]
         [Authorize(Policy = "SuperAdmin")]
         public async Task<IActionResult> DeleteHabitAsync(DeleteHabitDto id)
@@ -119,6 +142,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Assign a habit to a worker
+        /// </summary>
+        /// <param name="dto">Assignment data</param>
+        /// <returns>Assignment result</returns>
         [HttpPut("assign-worker")]
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> AssignWorkerToHabit([FromBody] MapHabitToWorkerDto dto)
@@ -144,6 +172,12 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Mark habit as completed or incomplete
+        /// </summary>
+        /// <param name="workerId">Worker identifier</param>
+        /// <param name="dto">Completion data</param>
+        /// <returns>Completion result</returns>
         [HttpPost("mark-habit/{workerId}")]
         public async Task<IActionResult> MarkHabitAsCompleted(Guid workerId, [FromBody] MarkHabitCompletionDto dto)
         {
@@ -179,6 +213,9 @@ namespace WorkersManagement.API.Controllers
             }
         }
     }
+    /// <summary>
+    /// Habit completion request data
+    /// </summary>
     public record MarkHabitCompletionDto
     {
         [Required(ErrorMessage = "Habit ID is required.")]

@@ -1,16 +1,14 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Ocsp;
-using WorkersManagement.Core.Repositories;
 using WorkersManagement.Domain.Dtos.SubTeam;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure.Entities;
-using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
-
+    /// <summary>
+    /// Manage subteam operations and associations
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class SubTeamController : ControllerBase
@@ -26,6 +24,11 @@ namespace WorkersManagement.API.Controllers
             _teamRepository = teamRepository;
         }
 
+        /// <summary>
+        /// Create a new subteam
+        /// </summary>
+        /// <param name="subTeamCreateDto">Subteam creation data</param>
+        /// <returns>Newly created subteam</returns>
         [HttpPost("add-new-subteam")]
         public async Task<ActionResult<SubTeamDto>> CreateSubTeam([FromBody] CreateSubTeamDto subTeamCreateDto)
         {
@@ -69,6 +72,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get subteam by ID
+        /// </summary>
+        /// <param name="id">Subteam identifier</param>
+        /// <returns>Subteam details</returns>
         [HttpGet("get-subteam-by-Id/{id}")]
         public async Task<ActionResult<SubTeamDto>> GetSubTeam(Guid id)
         {
@@ -91,6 +99,10 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get all subteams
+        /// </summary>
+        /// <returns>List of all subteams</returns>
         [HttpGet("get-all-subteams")]
         public async Task<ActionResult<IEnumerable<SubTeamDto>>> GetAllSubTeams()
         {
@@ -108,6 +120,12 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Update subteam information
+        /// </summary>
+        /// <param name="id">Subteam identifier</param>
+        /// <param name="subTeamDto">Updated subteam data</param>
+        /// <returns>Updated subteam</returns>
         [HttpPut("update-subteam/{id}")]
         [Authorize(Policy ="Admin")]
         public async Task<ActionResult<SubTeamDto>> UpdateSubTeam(Guid id, [FromBody] SubTeamDto subTeamDto)
@@ -148,6 +166,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete a subteam
+        /// </summary>
+        /// <param name="id">Subteam identifier</param>
+        /// <returns>Delete result</returns>
         [HttpDelete("delete-subteam/{id}")]
         public async Task<ActionResult> DeleteSubTeam(Guid id)
         {
@@ -174,7 +197,11 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while deleting the subteam.");
             }
         }
-
+        /// <summary>
+        /// Get subteams by team name
+        /// </summary>
+        /// <param name="teamName">Team name</param>
+        /// <returns>List of subteams for the team</returns>
         [HttpGet("get-subteams-by-team/{teamId}")]
         public async Task<ActionResult<IEnumerable<SubTeamDto>>> GetSubTeamsByTeamId(string teamName)
         {

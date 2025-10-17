@@ -4,7 +4,9 @@ using WorkersManagement.Infrastructure.EmailComposerDtos;
 
 namespace WorkersManagement.API.Controllers
 {
-
+    /// <summary>
+    /// Manage email templates and rich text content
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class TemplatesController : ControllerBase
@@ -18,6 +20,11 @@ namespace WorkersManagement.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Create a new email template
+        /// </summary>
+        /// <param name="request">Template creation data</param>
+        /// <returns>Newly created template</returns>
         [HttpPost("create")]
         public async Task<IActionResult> CreateTemplate([FromBody] RichTextTemplateRequestDto request)
         {
@@ -33,6 +40,12 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Update an existing template
+        /// </summary>
+        /// <param name="templateId">Template identifier</param>
+        /// <param name="request">Updated template data</param>
+        /// <returns>Updated template</returns>
         [HttpPut("update/{templateId}")]
         public async Task<IActionResult> UpdateTemplate(Guid templateId, [FromBody] RichTextTemplateRequestDto request)
         {
@@ -48,6 +61,10 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get all templates
+        /// </summary>
+        /// <returns>List of all templates</returns>
         [HttpGet("all")]
         public async Task<IActionResult> GetAllTemplates()
         {
@@ -55,6 +72,11 @@ namespace WorkersManagement.API.Controllers
             return Ok(templates);
         }
 
+        /// <summary>
+        /// Get template by ID
+        /// </summary>
+        /// <param name="templateId">Template identifier</param>
+        /// <returns>Template details</returns>
         [HttpGet("{templateId}")]
         public async Task<IActionResult> GetTemplate(Guid templateId)
         {
@@ -70,6 +92,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete a template
+        /// </summary>
+        /// <param name="templateId">Template identifier</param>
+        /// <returns>Delete result</returns>
         [HttpDelete("{templateId}")]
         public async Task<IActionResult> DeleteTemplate(Guid templateId)
         {
@@ -78,6 +105,11 @@ namespace WorkersManagement.API.Controllers
                          : NotFound(new { error = "Template not found" });
         }
 
+        /// <summary>
+        /// Preview template with sample data
+        /// </summary>
+        /// <param name="request">Preview data</param>
+        /// <returns>HTML preview</returns>
         [HttpPost("preview")]
         public IActionResult PreviewTemplate([FromBody] TemplatePreviewRequestDto request)
         {
@@ -93,6 +125,11 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Upload image for template use
+        /// </summary>
+        /// <param name="file">Image file</param>
+        /// <returns>Upload result</returns>
         [HttpPost("upload-image")]
         public async Task<IActionResult> UploadImage(IFormFile file)
         {
@@ -108,6 +145,10 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get available font options
+        /// </summary>
+        /// <returns>List of font options</returns>
         [HttpGet("font-options")]
         public async Task<IActionResult> GetFontOptions()
         {
@@ -115,6 +156,11 @@ namespace WorkersManagement.API.Controllers
             return Ok(options);
         }
 
+        /// <summary>
+        /// Convert HTML content to plain text
+        /// </summary>
+        /// <param name="request">HTML content to convert</param>
+        /// <returns>Plain text version</returns>
         [HttpPost("convert-to-plaintext")]
         public async Task<IActionResult> ConvertToPlainText([FromBody] ConvertToPlainTextRequest request)
         {
@@ -130,6 +176,10 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get one-time use templates (non-system templates)
+        /// </summary>
+        /// <returns>List of one-time templates</returns>
         [HttpGet("one-time-templates")]
         public async Task<IActionResult> GetOneTimeTemplates()
         {

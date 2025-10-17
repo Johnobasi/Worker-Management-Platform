@@ -6,6 +6,9 @@ using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
+    /// <summary>
+    /// Dashboard data for worker statistics and habits
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
@@ -24,6 +27,11 @@ namespace WorkersManagement.API.Controllers
         private readonly ILogger<DashboardController> _logger = logger;
         private readonly IHabitCompletionRepository _habitCompletionRepository = habitCompletionRepository;
 
+        /// <summary>
+        /// Get worker dashboard with statistics and habit progress
+        /// </summary>
+        /// <param name="workerId">Worker identifier</param>
+        /// <returns>Dashboard data with habits, attendance, and rewards</returns>
         [HttpGet("{workerId}")]
         public async Task<IActionResult> GetDashboard(Guid workerId)
         {
