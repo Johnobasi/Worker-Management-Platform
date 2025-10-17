@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Core.Abstract;
 using WorkersManagement.Infrastructure.EmailComposerDtos;
 
@@ -6,6 +7,7 @@ namespace WorkersManagement.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class EmailController : ControllerBase
     {
         private readonly IEmailService _emailService;
@@ -18,6 +20,7 @@ namespace WorkersManagement.API.Controllers
         }
 
         [HttpPost("send")]
+        [AllowAnonymous]
         public async Task<IActionResult> SendEmail([FromBody] BulkEmailDto emailDto)
         {
             if (emailDto == null)

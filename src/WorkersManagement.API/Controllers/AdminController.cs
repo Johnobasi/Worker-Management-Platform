@@ -143,15 +143,33 @@ namespace WorkersManagement.API.Controllers
 
         [HttpGet("get-workers")]
         [Authorize(Policy = "Admin")]
-        public async Task<IActionResult> GetAllWorkers()
+        public async Task<IActionResult> GetAllWorkers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
         {
             try
             {
+                if (pageNumber <= 0) pageNumber = 1;
+                if (pageSize <= 0) pageSize = 20;
+
                 var workers = await _workersRepository.GetAllWorkersAsync();
-                workers.Count();
-                var workerDtos = workers.ToSummaryDtos();
+                var totalCount = workers.Count;
+
+                var pagedWorkers = workers
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                var workerDtos = pagedWorkers.ToSummaryDtos();
+                var response = new
+                {
+                    TotalCount = totalCount,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                    Data = workerDtos
+                };
+
                 _logger.LogInformation("Fetched {Count} workers successfully", workerDtos.Count());
-                return Ok(workerDtos);
+                return Ok(response);
             }
             catch (Exception ex)
             {
