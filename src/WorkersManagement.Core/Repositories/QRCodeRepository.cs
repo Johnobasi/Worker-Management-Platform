@@ -82,7 +82,7 @@ namespace WorkersManagement.Core.Repositories
 
             // Check if a QR code already exists for this worker
             var existingQrCode = await _context.QRCodes.FirstOrDefaultAsync(q => q.WorkerId == workerId);
-
+            QRCode qrCode;
             if (existingQrCode != null)
             {
                 // Update existing barcode image and metadata
@@ -91,13 +91,13 @@ namespace WorkersManagement.Core.Repositories
                 existingQrCode.IsActive = true;
 
                 _context.QRCodes.Update(existingQrCode);
-                await _context.SaveChangesAsync();
-                return existingQrCode;
+                qrCode = existingQrCode;
+
             }
             else
             {
                 // Insert new QR code
-                var qrCode = new QRCode
+                qrCode = new QRCode
                 {
                     Id = Guid.NewGuid(),
                     WorkerId = workerId,
@@ -106,10 +106,10 @@ namespace WorkersManagement.Core.Repositories
                     IsActive = true
                 };
 
-                _context.QRCodes.Add(qrCode);
-                await _context.SaveChangesAsync();
-                return qrCode;
+                await _context.QRCodes.AddAsync(qrCode);
             }
+            await _context.SaveChangesAsync();
+            return qrCode;
         }
 
 

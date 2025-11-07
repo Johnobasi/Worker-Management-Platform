@@ -29,6 +29,7 @@ namespace WorkersManagement.Core
             services.AddScoped<ISubTeamRepository, SubTeamRepository>();
 
             services.AddScoped<ITemplateDesignerService, TemplateDesignerService>();
+            services.AddScoped<IJwt, JWTService>();
             services.AddHostedService<SundayRewardProcessor>();
 
             services.Configure<EmailSettings>(configuration.GetSection(nameof(EmailSettings)));

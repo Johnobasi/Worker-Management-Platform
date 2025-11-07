@@ -10,7 +10,7 @@ namespace WorkersManagement.Domain.Interfaces
         Task UpdateWorkerAsync(Worker user);
         Task DeleteWorkerAsync(Guid id);
 
-        Task<Guid> CreateWorkerAsync(CreateNewWorkerDto dto);
+        Task<CreateWorkerResult> CreateWorkerAsync(CreateNewWorkerDto dto);
         Task<Worker> GetWorkerByNumberAsync(string workerNumber);
         Task<List<Worker>> GetAllWorkersForEmailAsync();
         Task<List<Worker>> GetWorkersByIdsAsync(List<Guid> workerIds);

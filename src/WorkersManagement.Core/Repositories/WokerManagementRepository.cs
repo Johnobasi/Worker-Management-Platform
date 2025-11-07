@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
@@ -9,13 +11,16 @@ using WorkersManagement.Infrastructure.Entities;
 namespace WorkersManagement.Core.Repositories
 {
     public class WokerManagementRepository(WorkerDbContext workerDbContext,
-        ILogger<WokerManagementRepository> logger, IDepartmentRepository departmentRepository, IWorkersAuthRepository authRepository) : IWorkerManagementRepository
+        ILogger<WokerManagementRepository> logger, IDepartmentRepository departmentRepository, 
+        IWorkersAuthRepository authRepository,
+        IJwt jwt) : IWorkerManagementRepository
     {
         private readonly WorkerDbContext _context = workerDbContext;
         private readonly ILogger<WokerManagementRepository> _logger = logger;
         private readonly IDepartmentRepository _departmentRepository = departmentRepository;
         private readonly string _profilePictureStoragePath = "uploads/ProfilePictures";
         private readonly IWorkersAuthRepository _authRepository = authRepository;
+        private readonly IJwt _jwtService = jwt;
 
         private static readonly Dictionary<string, string> TeamCodeMap = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -28,7 +33,7 @@ namespace WorkersManagement.Core.Repositories
             { "Missions", "MISS-" }
         };
 
-        public async Task<Guid> CreateWorkerAsync(CreateNewWorkerDto dto)
+        public async Task<CreateWorkerResult> CreateWorkerAsync(CreateNewWorkerDto dto)
         {
             _logger.LogInformation("Creating new user with email: {Email}", dto.Email);
 
@@ -103,9 +108,19 @@ namespace WorkersManagement.Core.Repositories
 
                 await _authRepository.SendPasswordSetupEmailAsync(workerToAdd);
 
+                var jwtToken = _jwtService.GenerateJwtToken(workerToAdd);
                 _logger.LogInformation("Worker created with WorkerNumber: {WorkerNumber}", workerNumber);
 
-                return workerToAdd.Id;
+               return new CreateWorkerResult
+               {
+                    WorkerId = workerToAdd.Id,
+                    WorkerNumber = workerToAdd.WorkerNumber,
+                    Email = workerToAdd.Email,
+                    FirstName = workerToAdd.FirstName,
+                    LastName = workerToAdd.LastName,
+                    JwtToken = jwtToken,
+                    CreatedAt = DateTime.UtcNow
+               };
             }
             catch (Exception ex)
             {
@@ -269,5 +284,7 @@ namespace WorkersManagement.Core.Repositories
                 return new List<Worker>();
             }
         }
+
+
     }
 }

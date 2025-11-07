@@ -1,10 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.Dtos.WorkerAuthentication;
 using WorkersManagement.Domain.Interfaces;
@@ -15,7 +11,8 @@ namespace WorkersManagement.Core.Repositories
     public class  WorkerAuthRepository(
         WorkerDbContext context,
         ILogger<WorkerAuthRepository> logger,
-        IConfiguration configuration, IEmailService emailService) : IWorkersAuthRepository
+        IConfiguration configuration, IEmailService emailService,
+        IJwt jwt) : IWorkersAuthRepository
 
       {
 
@@ -23,6 +20,7 @@ namespace WorkersManagement.Core.Repositories
             private readonly ILogger<WorkerAuthRepository> _logger = logger;
             private readonly IConfiguration _configuration = configuration;
             private readonly IEmailService _emailService = emailService;
+            private readonly IJwt _jwt = jwt;
 
         public async Task<string> LoginAsync(LoginDto dto)
             {
@@ -47,7 +45,7 @@ namespace WorkersManagement.Core.Repositories
                 worker.LastLogin = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
-                var token = GenerateJwtToken(worker);
+                var token = _jwt.GenerateJwtToken(worker);
                 _logger.LogInformation("Login successful for {Email}", dto.Email);
                 return token;
         }
@@ -186,39 +184,7 @@ namespace WorkersManagement.Core.Repositories
 
             _logger.LogInformation("Token verified successfully for {Email}", email);
         }
-        private string GenerateJwtToken(Worker worker)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]!);
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.NameIdentifier, worker.WorkerNumber),
-                new(ClaimTypes.Email, worker.Email)
-            };
 
-            // Add a Claim for each role
-            foreach (var role in worker.Roles.Select(r =>
-                             r is Enum ? r.ToString() :
-                             r.GetType().GetProperty("Role")?.GetValue(r)?.ToString()))
-            {
-                if (!string.IsNullOrWhiteSpace(role))
-                    claims.Add(new Claim(ClaimTypes.Role, role!));
-            }
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddHours(24),
-                Issuer = _configuration["Jwt:Issuer"],
-                Audience = _configuration["Jwt:Audience"],
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature)
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-                return tokenHandler.WriteToken(token);
-        }
 
         public async Task RequestPasswordResetAsync(string email)
         {
