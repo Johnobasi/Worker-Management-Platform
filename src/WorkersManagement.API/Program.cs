@@ -19,10 +19,10 @@ namespace WorkersManagement.API
             // Add services to the container.
             builder.Services.AddCors(options =>
             {
-                options.AddDefaultPolicy(policy =>
+                options.AddPolicy("AllowAll", policy =>
                 {
                     policy
-                        .AllowAnyOrigin()
+                        .AllowAnyOrigin()   // allow all domains
                         .AllowAnyHeader()
                         .AllowAnyMethod();
                 });
@@ -163,8 +163,9 @@ namespace WorkersManagement.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            app.UseCors();
+           
             app.UseHttpsRedirection();
+            app.UseCors("AllowAll");
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();
