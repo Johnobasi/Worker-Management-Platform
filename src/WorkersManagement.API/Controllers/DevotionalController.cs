@@ -35,7 +35,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="request">Devotional file and data</param>
         /// <returns>Upload result</returns>
         [HttpPost("upload-devotionals")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> UploadDevotional([FromForm] UploadDevotionalRequest request)
         {
             try
@@ -111,7 +111,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="id">Devotional identifier</param>
         /// <returns>Devotional file</returns>
         [HttpGet("download/{id}")]
-        [Authorize(Policy = "Worker")]
+        [AllowAnonymous]
         public async Task<IActionResult> DownloadDevotional(Guid id)
         {
             try
@@ -142,7 +142,7 @@ namespace WorkersManagement.API.Controllers
         /// </summary>
         /// <returns>List of devotionals</returns>
         [HttpGet("get-all-devotionals")]
-        [Authorize(Policy = "Worker")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllDevotionals()
         {
             try
@@ -163,7 +163,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="id">Devotional identifier</param>
         /// <returns>Delete result</returns>
         [HttpDelete("delete-devotional/{id}")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> DeleteDevotional(Guid id)
         {
             try

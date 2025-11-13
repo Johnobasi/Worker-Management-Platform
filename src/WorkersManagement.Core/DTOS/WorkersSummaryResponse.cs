@@ -2,6 +2,8 @@
 
 namespace WorkersManagement.Core.DTOS
 {
+   
+
     public record WorkersSummaryResponse(
         Guid Id,
         string FullName,

@@ -1,4 +1,5 @@
-﻿using WorkersManagement.Infrastructure;
+﻿using WorkersManagement.Domain.Dtos.Habits;
+using WorkersManagement.Infrastructure;
 
 namespace WorkersManagement.Domain.Interfaces
 {
@@ -8,6 +9,6 @@ namespace WorkersManagement.Domain.Interfaces
         Task<bool> MarkAttendanceAsync(string qrCodeData);
         Task SaveAttendance(Guid workerId, DateTime checkInTime);
         Task<IEnumerable<Attendance>> GetWorkerAttendances(Guid workerId, DateTime startDate);
-        Task<IEnumerable<Attendance>> GetAllAttendancesAsync(DateTime startDate, DateTime endDate);
+        Task<IEnumerable<AttendanceDto>> GetAllAttendancesAsync(DateTime? startDate, DateTime? endDate);
     }
 }

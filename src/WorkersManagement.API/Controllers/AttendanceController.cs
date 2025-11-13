@@ -120,7 +120,7 @@ namespace WorkersManagement.API.Controllers
         /// <returns>All attendance records in date range</returns>
         [HttpGet]
         [Authorize(Policy = "Admin")]
-        public async Task<IActionResult> GetAllAttendances([FromQuery] DateTime startDate, [FromQuery] DateTime endDate)
+        public async Task<IActionResult> GetAllAttendances([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             _logger.LogInformation($"Fetching all attendances between {startDate:yyyy-MM-dd} and {endDate:yyyy-MM-dd}...");
             try

@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Text;
 using WorkersManagement.Domain.Interfaces;
-using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
@@ -25,43 +24,37 @@ namespace WorkersManagement.API.Controllers
         /// <summary>
         /// Get worker activity summary as CSV
         /// </summary>
-        /// <param name="isAdmin">Admin access flag</param>
         /// <param name="startDate">Report start date</param>
         /// <param name="endDate">Report end date</param>
         /// <param name="teamName">Filter by team name</param>
         /// <param name="departmentName">Filter by department name</param>
         /// <returns>CSV file with worker activity data</returns>
         [HttpGet("worker-activity-summary")]
-        [Authorize(Policy = "HOD")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetWorkerActivitySummary(
-              [FromQuery] bool isAdmin,
-              [FromQuery] DateTime? startDate = null,
-              [FromQuery] DateTime? endDate = null,
+              [FromQuery] DateTime? startDate ,
+              [FromQuery] DateTime? endDate ,
               [FromQuery] string? teamName = null,
               [FromQuery] string? departmentName = null)
         {
-            if (!isAdmin)
-                return Forbid("Only admins can view this report.");
 
-            startDate ??= new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-            endDate ??= DateTime.UtcNow;
 
-            var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate.Value, endDate.Value);
+            var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate, endDate);
 
             if (!string.IsNullOrWhiteSpace(departmentName))
             {
                 departmentName = departmentName.Trim().ToLower();
                 attendanceData = attendanceData
-                    .Where(a => a.Worker.Department != null &&
-                                a.Worker.Department.Name.ToLower() == departmentName)
+                    .Where(a => 
+                                a.Worker.DepartmentName == departmentName)
                     .ToList();
             }
             else if (!string.IsNullOrWhiteSpace(teamName))
             {
                 teamName = teamName.Trim().ToLower();
                 attendanceData = attendanceData
-                    .Where(a => a.Worker.Department?.Teams != null &&
-                                a.Worker.Department.Teams.Name.ToLower() == teamName)
+                    .Where(a =>
+                             a.Worker.TeamName.ToLower() == teamName)
                     .ToList();
             }
 
@@ -69,7 +62,7 @@ namespace WorkersManagement.API.Controllers
 
             var habitsData = await _habitRepository.GetHabitsByWorkerIdAsync(workerIds);
             habitsData = habitsData
-                .Where(h => h.CompletedAt >= startDate.Value && h.CompletedAt <= endDate.Value)
+                .Where(h => h.CompletedAt >= startDate && h.CompletedAt <= endDate)
                 .ToList();
 
             var summaries = attendanceData
@@ -81,11 +74,11 @@ namespace WorkersManagement.API.Controllers
 
                     return new
                     {
-                        WorkerId = worker.Id,
+                        WorkerNumber = worker.WorkerNumber,
                         Name = $"{worker.FirstName} {worker.LastName}",
                         Email = worker.Email,
-                        Department = worker.Department?.Name,
-                        Team = worker.Department?.Teams?.Name,
+                        Department = worker.DepartmentName,
+                        Team = worker.TeamName,
                         AttendanceCount = g.Count(),
                         HabitCount = habitCount
                     };
@@ -100,44 +93,37 @@ namespace WorkersManagement.API.Controllers
         /// <summary>
         /// Export detailed attendance and habit report
         /// </summary>
-        /// <param name="isAdmin">Admin access flag</param>
         /// <param name="startDate">Report start date</param>
         /// <param name="endDate">Report end date</param>
         /// <param name="teamName">Filter by team name</param>
         /// <param name="departmentName">Filter by department name</param>
         /// <returns>CSV file with detailed attendance and habit data</returns>
         [HttpGet("export-attendance")]
-        [Authorize(Policy = "HOD")]
+        [AllowAnonymous]
         public async Task<IActionResult> ExportAttendanceReport(
-         [FromQuery] bool isAdmin,
-         [FromQuery] DateTime? startDate = null,
-         [FromQuery] DateTime? endDate = null,
-         [FromQuery] string? teamName = null,
-         [FromQuery] string? departmentName = null)
+         [FromQuery] DateTime? startDate,
+         [FromQuery] DateTime? endDate ,
+         [FromQuery] string? teamName,
+         [FromQuery] string? departmentName)
         {
-            if (!isAdmin)
-                return Forbid("Only admins can export reports.");
 
-            startDate ??= DateTime.UtcNow.AddMonths(-1);
-            endDate ??= DateTime.UtcNow;
-
-            var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate.Value, endDate.Value);
+            var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate, endDate);
 
             // Apply department/team name filters
             if (!string.IsNullOrWhiteSpace(departmentName))
             {
                 departmentName = departmentName.Trim().ToLower();
                 attendanceData = attendanceData
-                    .Where(a => a.Worker.Department != null &&
-                                a.Worker.Department.Name.ToLower() == departmentName)
+                    .Where(a => 
+                                a.Worker.DepartmentName.ToLower() == departmentName)
                     .ToList();
             }
             else if (!string.IsNullOrWhiteSpace(teamName))
             {
                 teamName = teamName.Trim().ToLower();
                 attendanceData = attendanceData
-                    .Where(a => a.Worker.Department?.Teams != null &&
-                                a.Worker.Department.Teams.Name.ToLower() == teamName)
+                    .Where(a => 
+                                a.Worker.DepartmentName.ToLower() == teamName)
                     .ToList();
             }
 
@@ -145,32 +131,20 @@ namespace WorkersManagement.API.Controllers
 
             var habitsData = await _habitRepository.GetHabitsByWorkerIdAsync(workerIds);
             habitsData = habitsData
-                .Where(h => h.CompletedAt >= startDate.Value && h.CompletedAt <= endDate.Value)
+                .Where(h => h.CompletedAt >= startDate && h.CompletedAt <= endDate)
                 .ToList();
 
             var attendanceCsv = GenerateCsv(attendanceData.Select(a => new
             {
-                WorkerId = a.WorkerId,
+                WorkerNumber = a.Worker.WorkerNumber,
                 WorkerName = $"{a.Worker.FirstName} {a.Worker.LastName}",
                 Date = a.CreatedAt.ToString("yyyy-MM-dd"),
                 Status = a.Status,
-                Department = a.Worker.Department?.Name,
-                Team = a.Worker.Department?.Teams?.Name
+                Department = a.Worker.DepartmentName,
+                Team = a.Worker.TeamName
             }));
 
-            var habitsCsv = GenerateCsv(habitsData.Select(h => new
-            {
-                WorkerId = h.WorkerId,
-                WorkerName = $"{h.Worker.FirstName} {h.Worker.LastName}",
-                HabitType = h.Type.ToString(),
-                CompletedAt = h.CompletedAt.ToString("yyyy-MM-dd"),
-                Notes = h.Notes,
-                Amount = h.Type == HabitType.Giving ? h.Amount : null,
-                Department = h.Worker.Department?.Name,
-                Team = h.Worker.Department?.Teams?.Name
-            }));
-
-            var combined = $"Attendance Report\n{attendanceCsv}\n\nHabit Report\n{habitsCsv}";
+            var combined = $"Attendance Report\n{attendanceCsv}";
             return File(Encoding.UTF8.GetBytes(combined), "text/csv", $"attendance_report_{DateTime.UtcNow:yyyyMMdd}.csv");
         }
 
@@ -178,27 +152,21 @@ namespace WorkersManagement.API.Controllers
         /// <summary>
         /// Export department and team summary report
         /// </summary>
-        /// <param name="isAdmin">Admin access flag</param>
         /// <param name="startDate">Report start date</param>
         /// <param name="endDate">Report end date</param>
         /// <returns>CSV file with department and team summaries</returns>
         [HttpGet("export-summary")]
-        [Authorize(Policy = "HOD")]
+        [AllowAnonymous]
         public async Task<IActionResult> ExportWorkerSummaryReport(
-          [FromQuery] bool isAdmin,
-          [FromQuery] DateTime? startDate = null,
-          [FromQuery] DateTime? endDate = null)
+          [FromQuery] DateTime? startDate,
+          [FromQuery] DateTime? endDate)
         {
-            if (!isAdmin)
-                return Forbid("Only admins can export summary.");
 
-            startDate ??= DateTime.UtcNow.AddMonths(-1);
-            endDate ??= DateTime.UtcNow;
 
-            var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate.Value, endDate.Value);
+            var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate, endDate);
 
             var departmentSummary = attendanceData
-                .GroupBy(a => a.Worker.Department.Name)
+                .GroupBy(a => a.Worker.DepartmentName)
                 .Select(g => new
                 {
                     Department = g.Key,
@@ -206,7 +174,7 @@ namespace WorkersManagement.API.Controllers
                 });
 
             var teamSummary = attendanceData
-                .GroupBy(a => a.Worker.Department.Teams.Name)
+                .GroupBy(a => a.Worker.TeamName)
                 .Select(g => new
                 {
                     Team = g.Key,

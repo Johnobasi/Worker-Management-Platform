@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
 using WorkersManagement.Infrastructure.Enumerations;
@@ -35,12 +36,39 @@ namespace WorkersManagement.Core.Repositories
 
         }
 
-        public async Task<IEnumerable<Attendance>> GetAllAttendancesAsync(DateTime startDate, DateTime endDate)
+        public async Task<IEnumerable<AttendanceDto>> GetAllAttendancesAsync(DateTime? startDate, DateTime? endDate)
         {
-            return await _context.Attendances
-            .Where(a => a.CreatedAt >= startDate && a.CreatedAt <= endDate)
-            .Include(a => a.Worker) // Include related Worker details if necessary
-            .ToListAsync();
+            var query = _context.Attendances.AsQueryable();
+
+            // Apply date filter only if provided
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                query = query.Where(a => a.CreatedAt >= startDate.Value && a.CreatedAt <= endDate.Value);
+            }
+
+            // Select into DTO to include only necessary Worker info
+            return await query
+                .Select(a => new AttendanceDto
+                {
+                    Id = a.Id,
+                    WorkerId = a.WorkerId,
+                    CheckInTime = a.CheckInTime,
+                    Type = a.Type.ToString(),
+                    CreatedAt = a.CreatedAt,
+                    Status = a.Status.ToString(),
+                    IsEarlyCheckIn = a.IsEarlyCheckIn,
+                    Worker = new WorkerDto
+                    {
+                        Id = a.Worker.Id,
+                        WorkerNumber = a.Worker.WorkerNumber,
+                        FirstName = a.Worker.FirstName,
+                        LastName = a.Worker.LastName,
+                        Email = a.Worker.Email,
+                        DepartmentName = a.Worker.Department.Name,
+                        TeamName = a.Worker.Department.Teams.Name
+                    }
+                })
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<Attendance>> GetWorkerAttendances(Guid workerId, DateTime startDate)

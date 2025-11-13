@@ -33,6 +33,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="workerId">Worker identifier</param>
         /// <returns>Dashboard data with habits, attendance, and rewards</returns>
         [HttpGet("{workerId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetDashboard(Guid workerId)
         {
             try

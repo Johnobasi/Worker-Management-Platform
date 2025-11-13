@@ -133,7 +133,7 @@ namespace WorkersManagement.Core.Repositories
             _logger.LogInformation($"Assigning QRCode {qrCodeId} to worker {workerId}");
 
             var qrCode = await _context.QRCodes.FirstOrDefaultAsync(q => q.Id == qrCodeId);
-            if (qrCode == null)
+            if(qrCode == null)
                 throw new ArgumentException("QR Code not found");
 
             qrCode.WorkerId = workerId;
