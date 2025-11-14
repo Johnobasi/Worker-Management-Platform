@@ -56,8 +56,10 @@ namespace WorkersManagement.Core.Repositories
                 .ThenInclude(c=>c.Departments)
                 .Select(st => new SubTeamDto
                 {
+                    Id = st.Id,
                     Name = st.Name,
-                    Description = st.Description
+                    Description = st.Description,
+                    
                 })
                 .ToListAsync();
         }

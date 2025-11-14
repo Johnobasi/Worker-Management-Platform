@@ -28,6 +28,12 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
+                if (dto == null)
+                {
+                    _logger.LogWarning("Login attempt with null request body");
+                    return BadRequest(new { Message = "Request body cannot be empty." });
+                }
+
                 var token = await _authRepository.LoginAsync(dto);
                 return Ok(new { Token = token });
             }
@@ -37,7 +43,8 @@ namespace WorkersManagement.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { Message = ex.Message });
+                _logger.LogError(ex, "Unexpected error during login for {Email}", dto?.Email);
+                return BadRequest(new { Message = "An error occurred during login." });
             }
         }
 

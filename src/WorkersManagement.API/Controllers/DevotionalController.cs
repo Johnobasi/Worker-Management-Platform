@@ -86,13 +86,37 @@ namespace WorkersManagement.API.Controllers
 
                 // Send email notifications
                 var users = await _userRepository.GetAllWorkersAsync();
+
                 foreach (var user in users)
                 {
-                    await _emailService.SendEmailAsync(
-                        user.Email,
-                        "New Monthly Devotional Available",
-                        "A new monthly devotional has been uploaded. Please check your dashboard to download it."
-                    );
+                    var email = user.Email?.Trim();
+
+                    if (string.IsNullOrWhiteSpace(email))
+                    {
+                        _logger.LogWarning("Skipping worker {WorkerId}: Email is null or empty", user.Id);
+                        continue;
+                    }
+
+                    if (!new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(email))
+                    {
+                        _logger.LogWarning("Skipping worker {WorkerId}: Invalid email format: {Email}", user.Id, email);
+                        continue;
+                    }
+
+                    try
+                    {
+                        await _emailService.SendEmailAsync(
+                            email,
+                            "New Monthly Devotional Available",
+                            "A new monthly devotional has been uploaded. Please check your dashboard to download it."
+                        );
+
+                        _logger.LogInformation("Email sent successfully to {Email}", email);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send email to {Email}", email);
+                    }
                 }
 
                 return Ok("Devotional uploaded and notifications sent.");

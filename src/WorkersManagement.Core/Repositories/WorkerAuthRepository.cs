@@ -23,26 +23,32 @@ namespace WorkersManagement.Core.Repositories
             private readonly IJwt _jwt = jwt;
 
         public async Task<string> LoginAsync(LoginDto dto)
-            {
+        {
                 _logger.LogInformation("Attempting login for user: {Email}", dto.Email);
 
-                var worker = await _context.Workers
+            if (string.IsNullOrWhiteSpace(dto.Email))
+            {
+                throw new UnauthorizedAccessException("Email cannot be empty.");
+            }
+
+            var worker = await _context.Workers
                     .FirstOrDefaultAsync(w => w.Email == dto.Email);
 
-                if (worker == null)
-                {
-                    _logger.LogWarning("Login failed: Worker with email {Email} not found", dto.Email);
-                    throw new UnauthorizedAccessException("Invalid credentials");
-                }
+            if (worker == null)
+            {
+                _logger.LogWarning("No worker found with email: {Email}", dto.Email);
+                throw new UnauthorizedAccessException("Invalid email or password.");
+            }
 
-                dto.Password = dto.Password.Trim();
-                if (!BCrypt.Net.BCrypt.Verify(dto.Password, worker.PasswordHash))
-                {
-                    _logger.LogWarning("Login failed: Invalid password for {Email}", dto.Email);
-                    throw new UnauthorizedAccessException("Invalid credentials");
-                }
+            // Validate password
+            if (string.IsNullOrWhiteSpace(dto.Password) ||
+                !BCrypt.Net.BCrypt.Verify(dto.Password.Trim(), worker.PasswordHash))
+            {
+                _logger.LogWarning("Invalid password attempt for email: {Email}", dto.Email);
+                throw new UnauthorizedAccessException("Invalid email or password.");
+            }
 
-                worker.LastLogin = DateTime.UtcNow;
+            worker.LastLogin = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
                 var token = _jwt.GenerateJwtToken(worker);

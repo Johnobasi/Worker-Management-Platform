@@ -32,7 +32,19 @@ namespace WorkersManagement.API.Controllers
         {
             var allHabits = await _habitService.GetAllHabit();
             _ = allHabits.Count();
-            return Ok(allHabits);
+
+            var habitProjections = allHabits.Select(delegate (Habit h)
+            {
+                return new
+                {
+                    HabitId = h.Id,
+                    Type = h.Type,
+                    Notes = h.Notes,
+                    Amount = h.Amount,
+                    CompletedAt = h.CompletedAt 
+                };
+            });
+            return Ok(habitProjections);
         }
 
         /// <summary>
@@ -54,12 +66,22 @@ namespace WorkersManagement.API.Controllers
                 }
                 var habit = new Habit
                 {
+                    Id = Guid.NewGuid(),
                     Type = request.Type,
                     Notes = request.Notes,
                     Amount = request.Amount,
-                };
+                    CompletedAt = DateTime.UtcNow
 
-                await _habitService.AddHabitAsync(habit);
+                };
+                var loggedInWorkerIdString = User.FindFirst("workerId")?.Value;
+
+                if (string.IsNullOrWhiteSpace(loggedInWorkerIdString) ||
+                    !Guid.TryParse(loggedInWorkerIdString, out Guid loggedInWorkerId))
+                {
+                    return Unauthorized("Invalid worker identity.");
+                }
+
+                await _habitService.AddHabitAsync(habit, loggedInWorkerId);
                 return Ok("Habit successfully added.");
             }
             catch (Exception ex)
@@ -120,7 +142,7 @@ namespace WorkersManagement.API.Controllers
         /// <returns>Delete result</returns>
         [HttpDelete("delete-habit/{id}")]
         [Authorize(Policy = "SuperAdmin")]
-        public async Task<IActionResult> DeleteHabitAsync(DeleteHabitDto id)
+        public async Task<IActionResult> DeleteHabitAsync(Guid id)
         {
             try
             {
@@ -130,10 +152,9 @@ namespace WorkersManagement.API.Controllers
                     return BadRequest(new { Errors = errors });
                 }
                 var result = await _habitService.DeleteHabitAsync(id);
-                if (!result)
-                    return NotFound($"Habit with ID '{id}' not found.");
-
-                return NoContent();
+                return result
+                    ? Ok("Habit successfully deleted.")
+                    : StatusCode(500, "Failed to delete habit.");
             }
             catch (Exception ex)
             {

@@ -1,4 +1,5 @@
-﻿using MailKit.Security;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;

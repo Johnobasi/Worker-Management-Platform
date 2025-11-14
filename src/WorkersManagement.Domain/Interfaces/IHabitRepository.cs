@@ -8,10 +8,10 @@ namespace WorkersManagement.Domain.Interfaces
     public interface IHabitRepository
     {
         Task<IEnumerable<Habit>> GetHabitsByWorkerIdAsync(List<Guid> workerIds);
-        Task<Habit> AddHabitAsync(Habit habit);
+        Task<Habit> AddHabitAsync(Habit habit, Guid loggedInWorkerId);
         Task<IEnumerable<Habit>> GetHabitsByTypeAsync(Guid workerId, HabitType type);
         Task<bool> UpdateHabitAsync(UpdateHabitDto habit);
-        Task<bool> DeleteHabitAsync(DeleteHabitDto habitId);
+        Task<bool> DeleteHabitAsync(Guid habitId);
         Task<Habit> GetHabitsByIdAsync(Guid habitId);
 
         Task<IEnumerable<Habit>> GetAllHabit();

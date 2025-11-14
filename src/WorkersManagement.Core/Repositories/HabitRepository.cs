@@ -16,8 +16,16 @@ namespace WorkersManagement.Core.Repositories
             _context = workerDbContext;
             _logger = logger;
         }
-        public async Task<Habit> AddHabitAsync(Habit habit)
+        public async Task<Habit> AddHabitAsync(Habit habit, Guid loggedInWorkerId)
         {
+
+            if (!Enum.IsDefined(typeof(HabitType), habit.Type))
+                throw new ArgumentException("Invalid habit type");
+
+            habit.WorkerId = loggedInWorkerId;
+
+            var workerExists = await _context.Workers
+                .AnyAsync(w => w.Id == loggedInWorkerId);
 
             _context.Habits.Add(habit);
             await _context.SaveChangesAsync();
@@ -78,10 +86,12 @@ namespace WorkersManagement.Core.Repositories
             return true;
         }
 
-        public async Task<bool> DeleteHabitAsync(DeleteHabitDto habitId)
+        public async Task<bool> DeleteHabitAsync(Guid habitId)
         {
             var habit = await _context.Habits.FindAsync(habitId);
-            if (habit == null) return false;
+            if (habit == null) 
+
+                return false;
 
             _context.Habits.Remove(habit);
             await _context.SaveChangesAsync();
@@ -97,7 +107,7 @@ namespace WorkersManagement.Core.Repositories
 
         public async Task<IEnumerable<Habit>> GetAllHabit()
         {
-            return await _context.Habits.ToListAsync();
+            return await _context.Habits.AsNoTracking().ToListAsync();
         }
 
         public async Task<bool> MapHabitToWorkerAsync(Guid habitId, Guid workerId)
