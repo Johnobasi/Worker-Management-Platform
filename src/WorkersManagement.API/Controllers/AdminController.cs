@@ -15,7 +15,7 @@ namespace WorkersManagement.API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Produces("application/json")]
-    //[Authorize]
+    [Authorize]
     public class AdminController : ControllerBase
     {
         private readonly IWorkerManagementRepository _workersRepository;
@@ -54,6 +54,7 @@ namespace WorkersManagement.API.Controllers
         /// <response code="500">Internal server error</response>
         //[Authorize(Policy = "CanCreateWorkers")]
         [HttpPost("create-worker")]
+        [AllowAnonymous]
         public async Task<IActionResult> CreateWorker([FromForm] CreateNewWorkerDto dto)
         {
             if (!ModelState.IsValid)
@@ -183,7 +184,7 @@ namespace WorkersManagement.API.Controllers
         /// <response code="404">Worker not found</response>
         /// <response code="500">Internal server error</response>
         [HttpDelete("delete-worker/{id}")]
-        [Authorize(Policy = "SuperAdmin")]
+        [AllowAnonymous]
         public async Task<IActionResult> DeleteWorker(Guid id)
         {
             try
@@ -252,6 +253,41 @@ namespace WorkersManagement.API.Controllers
         }
 
         /// <summary>
+        /// Get total number of workers
+        /// </summary>
+        /// <returns>Total workers count</returns>
+        /// <response code="200">Count retrieved successfully</response>
+        /// <response code="401">Unauthorized - Authentication required</response>
+        /// <response code="403">Forbidden - Admin role required</response>
+        /// <response code="500">Internal server error</response>
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [HttpGet("count-workers")]
+        [Authorize(Policy = "Admin")]
+        public async Task<IActionResult> GetWorkersCount()
+        {
+            try
+            {
+                var workers = await _workersRepository.GetAllWorkersAsync();
+                var totalCount = workers.Count;
+
+                _logger.LogInformation("Total workers count retrieved: {Count}", totalCount);
+
+                return Ok(new
+                {
+                    TotalCount = totalCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving workers count.");
+                return StatusCode(500, "An error occurred while retrieving the workers count.");
+            }
+        }
+
+        /// <summary>
         /// Get worker by ID
         /// </summary>
         /// <param name="id">Worker ID</param>
@@ -267,7 +303,7 @@ namespace WorkersManagement.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpGet("workers/{id}")]
-        [Authorize(Policy = "Worker")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetWorkerById(Guid id)
         {
             try
@@ -314,7 +350,7 @@ namespace WorkersManagement.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpPost("selected-workers")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetSelectedWorkers([FromBody] SelectedWorkersRequest request)
         {
             try
@@ -381,7 +417,7 @@ namespace WorkersManagement.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpPut("update-worker/{id}")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> UpdateWorkerAsync(Guid id, [FromBody] UpdateWorkersDto request)
         {
 

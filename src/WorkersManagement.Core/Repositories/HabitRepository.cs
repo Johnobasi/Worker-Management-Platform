@@ -125,5 +125,20 @@ namespace WorkersManagement.Core.Repositories
             return true;
         }
 
+        public async Task<List<Habit>> GetHabitsByWorkerAsync(Guid workerId)
+        {
+            try
+            {
+                return await _context.Habits
+                    .Where(h => h.WorkerId == workerId)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving habits for worker {workerId}");
+                return new List<Habit>();
+            }
+        }
+
     }
 }

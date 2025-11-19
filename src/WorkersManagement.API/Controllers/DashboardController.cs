@@ -30,44 +30,46 @@ namespace WorkersManagement.API.Controllers
         /// <summary>
         /// Get worker dashboard with statistics and habit progress
         /// </summary>
-        /// <param name="workerId">Worker identifier</param>
         /// <returns>Dashboard data with habits, attendance, and rewards</returns>
         [HttpGet("{workerId}")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetDashboard(Guid workerId)
+        public async Task<IActionResult> GetDashboard()
         {
             try
             {
-                var currentWorkerId = User.FindFirst("WorkerId")?.Value;
-                var isAdmin = User.IsInRole(UserRole.Admin.ToString());
-
-                // Only Admins can view other workers' dashboards
-                if (!isAdmin && workerId.ToString() != currentWorkerId)
-                    return Forbid("Workers can only view their own dashboard.");
+                // Get worker ID from claims
+                var workerIdClaim = User.FindFirst("workerId")?.Value;
+                if (!Guid.TryParse(workerIdClaim, out Guid workerId))
+                    return Unauthorized("Invalid worker ID.");
 
                 var today = DateTime.UtcNow.Date;
+                // Fetch all habits for the worker
+                var allHabits = await _habitRepository.GetHabitsByWorkerAsync(workerId);
 
-                // Daily completions
-                var givingToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Giving, today);
-                var fastingToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Fasting, today);
-                var bibleStudyToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.BibleStudy, today);
-                var nlpPrayerToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.NLPPrayer, today);
-                var devotionalToday = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Devotionals, today);
+                // Group by type
+                var habitGroups = allHabits.GroupBy(h => h.Type)
+                                           .ToDictionary(g => g.Key, g => g.ToList());
 
-                // Total completions
-                var givingTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Giving);
-                var fastingTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Fasting);
-                var bibleStudyTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.BibleStudy);
-                var nlpPrayerTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.NLPPrayer);
-                var devotionalTotal = await _habitCompletionRepository.GetCompletionCountByWorkerAndTypeAsync(workerId, HabitType.Devotionals);
-
-                var givingHabits = await _habitRepository.GetHabitsByTypeAsync(workerId, HabitType.Giving) ?? new List<Habit>();
+                var habitSummary = habitGroups.ToDictionary(
+                    g => g.Key.ToString(),
+                    g => new
+                    {
+                        HabitCount = g.Value.Count, // total habits of this type
+                        TodayCount = g.Value.Count(h => h.CompletedAt.Date == today), // completed today
+                        TotalCount = g.Value.Count, // all completed habits (all rows in table)
+                        TotalAmount = g.Key == HabitType.Giving ? g.Value.Sum(h => h.Amount ?? 0) : 0m
+                    }
+                );
+                // Worker info
                 var worker = await _workerRepository.GetWorkerByIdAsync(workerId);
+                    
+                // Attendance
                 var attendances = await _attendanceRepository.GetWorkerAttendances(workerId, today);
+
+                // Rewards
                 var workerReward = await _workerRewardRepository.GetRewardsForWorkerAsync(workerId);
 
-                var totalGivingAmount = givingHabits.Sum(h => h.Amount ?? 0);
-
+                // Build dashboard response
                 var dashboard = new
                 {
                     Worker = new
@@ -79,35 +81,7 @@ namespace WorkersManagement.API.Controllers
                     },
                     Attendance = attendances.Count(),
                     Reward = workerReward,
-                    HabitSummary = new
-                    {
-                        Giving = new
-                        {
-                            TodayCount = givingToday,
-                            TotalCount = givingTotal,
-                            TotalAmount = totalGivingAmount
-                        },
-                        Fasting = new
-                        {
-                            TodayCount = fastingToday,
-                            TotalCount = fastingTotal
-                        },
-                        BibleStudy = new
-                        {
-                            TodayCount = bibleStudyToday,
-                            TotalCount = bibleStudyTotal
-                        },
-                        NLPPrayer = new
-                        {
-                            TodayCount = nlpPrayerToday,
-                            TotalCount = nlpPrayerTotal
-                        },
-                        Devotionals = new
-                        {
-                            TodayCount = devotionalToday,
-                            TotalCount = devotionalTotal
-                        }
-                    }
+                    HabitSummary = habitSummary
                 };
 
                 return Ok(dashboard);

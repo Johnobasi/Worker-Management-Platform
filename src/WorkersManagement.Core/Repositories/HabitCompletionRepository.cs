@@ -50,16 +50,18 @@ namespace WorkersManagement.Core.Repositories
         {
             try
             {
+
                 var query = _workerDbContext.HabitCompletions
-                    .Join(_workerDbContext.Habits,
-                        hc => hc.HabitId,
-                        h => h.Id,
-                        (hc, h) => new { HabitCompletion = hc, Habit = h })
-                    .Where(hc => hc.Habit.WorkerId == workerId && hc.Habit.Type == type && hc.HabitCompletion.IsCompleted);
+                     .Include(hc => hc.Habit) // include habit for filtering
+                         .Where(hc => hc.IsCompleted && hc.Habit.WorkerId == workerId && hc.Habit.Type == type);
 
                 if (date.HasValue)
                 {
-                    query = query.Where(hc => hc.HabitCompletion.CompletedAt.Date == date.Value.Date);
+                    var startDate = date.Value.Date;
+                    var endDate = startDate.AddDays(1);
+
+                    // Filter by CompletedAt within the date range
+                    query = query.Where(hc => hc.CompletedAt >= startDate && hc.CompletedAt < endDate);
                 }
 
                 return await query.CountAsync();
@@ -68,6 +70,21 @@ namespace WorkersManagement.Core.Repositories
             {
                 _logger.LogError(ex, $"Error retrieving completion count for worker {workerId} and type {type}");
                 return 0;
+            }
+        }
+        public async Task<Dictionary<HabitType, int>> GetHabitCountsByWorkerAsync(Guid workerId)
+        {
+            try
+            {
+                return await _workerDbContext.Habits
+                    .Where(h => h.WorkerId == workerId)
+                    .GroupBy(h => h.Type)
+                    .ToDictionaryAsync(g => g.Key, g => g.Count());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error retrieving habit counts for worker {workerId}");
+                return new Dictionary<HabitType, int>();
             }
         }
 

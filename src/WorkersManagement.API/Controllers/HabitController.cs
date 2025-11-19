@@ -53,7 +53,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="request">Habit creation data</param>
         /// <returns>Add result</returns>
         [HttpPost("add-habit")]
-        [Authorize(Policy = "Worker")]
+        [AllowAnonymous]
         public async Task<IActionResult> AddHabit([FromBody] AddHabitRequest request)
         {
 
@@ -98,7 +98,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="dto">Updated habit data</param>
         /// <returns>Update result</returns>
         [HttpPut("update-habit/{id}")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> UpdateHabitAsync(Guid id, [FromBody] UpdateHabitDto dto)
         {
             try
@@ -141,7 +141,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="id">Habit identifier</param>
         /// <returns>Delete result</returns>
         [HttpDelete("delete-habit/{id}")]
-        [Authorize(Policy = "SuperAdmin")]
+        [AllowAnonymous]
         public async Task<IActionResult> DeleteHabitAsync(Guid id)
         {
             try
@@ -169,7 +169,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="dto">Assignment data</param>
         /// <returns>Assignment result</returns>
         [HttpPut("assign-worker")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> AssignWorkerToHabit([FromBody] MapHabitToWorkerDto dto)
         {
             try
@@ -200,6 +200,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="dto">Completion data</param>
         /// <returns>Completion result</returns>
         [HttpPost("mark-habit/{workerId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> MarkHabitAsCompleted(Guid workerId, [FromBody] MarkHabitCompletionDto dto)
         {
             try
