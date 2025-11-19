@@ -133,9 +133,10 @@ namespace WorkersManagement.API.Controllers
                             FirstName = row.Cell(2).GetString().Trim(),        // ✅ Column B: FirstName
                             LastName = row.Cell(3).GetString().Trim(),         // ✅ Column C: LastName
                             DepartmentName = row.Cell(4).GetString().Trim(),   // ✅ Column D: DepartmentName
-                            Role = [.. row.Cell(5).GetString()                 // ✅ Column E: Role
-                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                .Select(r => Enum.Parse<UserRole>(r.Trim(), true))],
+                            WorkerType = row.Cell(5).GetString()                     // Column E
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(r => Enum.Parse<WorkerType>(r.Trim(), true))
+                            .ToList(),
                             ProfilePicture = null
                         };
 

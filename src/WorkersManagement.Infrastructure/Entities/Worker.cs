@@ -7,6 +7,7 @@ namespace WorkersManagement.Infrastructure
     {
         public Guid Id { get; set; }
         public List<UserRole> Roles { get; set; } = new();
+        public List<WorkerType> Type { get; set; }
         public string WorkerNumber { get; set; }
         public string FirstName { get;  set; }
         public string LastName { get;  set; }

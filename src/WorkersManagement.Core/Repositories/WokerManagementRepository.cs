@@ -7,6 +7,7 @@ using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
 using WorkersManagement.Infrastructure.Entities;
+using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Core.Repositories
 {
@@ -88,7 +89,7 @@ namespace WorkersManagement.Core.Repositories
                     Email = dto.Email,
                     FirstName = dto.FirstName,
                     LastName = dto.LastName,
-                    Roles = dto.Role.ToList(),
+                    Type = dto.WorkerType.ToList(),
                     Department = department,
                     DepartmentId = department?.Id, // Set foreign key
                     WorkerNumber = workerNumber,

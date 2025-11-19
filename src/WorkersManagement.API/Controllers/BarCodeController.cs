@@ -42,6 +42,25 @@ namespace WorkersManagement.API.Controllers
             }
         }
 
+
+        ///
+        /// <summary>
+        /// get qr code image for a worker - New api requested
+        /// </summary>
+        /// <param name="workerId">Worker identifier</param>
+        /// <returns>Barcode image file</returns>
+        [HttpGet("worker/{workerId}/qrcode/download")]
+        public async Task<IActionResult> DownloadQRCode(Guid workerId)
+        {
+            var qr = await _barcodeRepository.GetBarcodeByWorkerIdAsync(workerId);
+
+            if (qr == null || qr.QRCodeImage == null)
+                return NotFound("No QR code assigned to this worker.");
+
+            var fileName = $"barcode_{workerId.ToString().Substring(0, 6)}.png";
+            return File(qr.QRCodeImage, "image/png", fileName); // triggers download
+        }
+
         /// <summary>
         /// Assign a barcode to a worker
         /// </summary>

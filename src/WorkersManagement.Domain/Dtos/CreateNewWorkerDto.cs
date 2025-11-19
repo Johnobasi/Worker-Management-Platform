@@ -20,9 +20,9 @@ namespace WorkersManagement.Domain.Dtos
         [Required(ErrorMessage = "Department name is required.")]
         public string DepartmentName { get; set; }
 
-        [Required(ErrorMessage = "At least one user role is required.")]
+        [Required(ErrorMessage = "Worker type is required.")]
         [JsonConverter(typeof(StringEnumConverter))]
-        public ICollection<UserRole> Role { get; set; } = [];
+        public ICollection<WorkerType> WorkerType { get; set; }
 
         public IFormFile ProfilePicture { get; set; } = null;
     }

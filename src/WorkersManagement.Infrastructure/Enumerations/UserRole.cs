@@ -1,4 +1,6 @@
-﻿namespace WorkersManagement.Infrastructure.Enumerations
+﻿using System.Text.Json.Serialization;
+
+namespace WorkersManagement.Infrastructure.Enumerations
 {
     public enum UserRole
     {
@@ -7,5 +9,13 @@
         SubTeamLead,
         HOD,
         Worker
+    }
+
+    public enum WorkerType
+    {
+        Worker,
+        HOD,
+        SubTeamLead,
+        TeamPastor
     }
 }
