@@ -309,9 +309,6 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
-                // Workers can only view their own profile
-                if (User.IsInRole(UserRole.Worker.ToString()) && id.ToString() != User.FindFirst("WorkerId")?.Value)
-                    return Forbid("Workers can only view their own profile.");
 
                 var worker = await _workersRepository.GetWorkerByIdAsync(id);
                 if (worker == null)
