@@ -15,5 +15,18 @@ namespace WorkersManagement.Domain.Dtos
 
 
         public decimal? Amount { get; set; } // Only required for Giving
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (Type == HabitType.Giving)
+            {
+                if (!Amount.HasValue || Amount <= 0)
+                {
+                    yield return new ValidationResult(
+                        "Amount is required and must be greater than 0 for Giving type.",
+                        new[] { nameof(Amount) });
+                }
+            }
+        }
     }
 }

@@ -23,6 +23,30 @@ namespace WorkersManagement.API.Controllers
         private readonly IHabitCompletionRepository _habitCompletionRepository = habitCompletionRepository;
 
         /// <summary>
+        /// Get all habit types
+        /// </summary>
+        [HttpGet("habit-types")]
+        [AllowAnonymous]
+        public IActionResult GetHabitTypes()
+        {
+            var types = Enum.GetValues(typeof(HabitType))
+                            .Cast<HabitType>()
+                            .Select(t => new
+                            {
+                                Value = t.ToString(),
+                                DisplayName = SplitCamelCase(t.ToString())
+                            });
+
+            return Ok(types);
+        }
+
+        private string SplitCamelCase(string input)
+        {
+            return System.Text.RegularExpressions.Regex
+                .Replace(input, "(\\B[A-Z])", " $1");
+        }
+
+        /// <summary>
         /// Get all habits
         /// </summary>
         /// <returns>List of all habits</returns>

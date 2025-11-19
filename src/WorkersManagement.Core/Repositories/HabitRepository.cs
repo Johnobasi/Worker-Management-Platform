@@ -16,6 +16,7 @@ namespace WorkersManagement.Core.Repositories
             _context = workerDbContext;
             _logger = logger;
         }
+
         public async Task<Habit> AddHabitAsync(Habit habit, Guid loggedInWorkerId)
         {
 
@@ -54,6 +55,8 @@ namespace WorkersManagement.Core.Repositories
             }
 
         }
+
+
 
         public async Task<IEnumerable<Habit?>> GetHabitsByWorkerIdAsync(List<Guid> workerIds)
         {

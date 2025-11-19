@@ -57,7 +57,9 @@ namespace WorkersManagement.API.Controllers
                         HabitCount = g.Value.Count, // total habits of this type
                         TodayCount = g.Value.Count(h => h.CompletedAt.Date == today), // completed today
                         TotalCount = g.Value.Count, // all completed habits (all rows in table)
-                        TotalAmount = g.Key == HabitType.Giving ? g.Value.Sum(h => h.Amount ?? 0) : 0m
+                        TotalAmount = g.Key == HabitType.Giving
+                            ? "£" + g.Value.Sum(h => h.Amount ?? 0).ToString("N2") // formatted with 2 decimals
+                            : "£0.00"
                     }
                 );
                 // Worker info
