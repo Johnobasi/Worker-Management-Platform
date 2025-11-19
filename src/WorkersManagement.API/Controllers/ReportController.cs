@@ -150,23 +150,58 @@ namespace WorkersManagement.API.Controllers
 
 
         /// <summary>
-        /// Export department and team summary report
+        /// Export department and team summary report with optional filtering.
         /// </summary>
+        /// <param name="department">Filter by department name (optional)</param>
+        /// <param name="team">Filter by team name (optional)</param>
+        /// <param name="workerIds">Filter by specific worker IDs (optional)</param>
         /// <param name="startDate">Report start date</param>
         /// <param name="endDate">Report end date</param>
-        /// <returns>CSV file with department and team summaries</returns>
+        /// <returns>CSV file with filtered department and team summaries</returns>
         [HttpGet("export-summary")]
         [AllowAnonymous]
         public async Task<IActionResult> ExportWorkerSummaryReport(
-          [FromQuery] DateTime? startDate,
-          [FromQuery] DateTime? endDate)
+        [FromQuery] string? department,
+        [FromQuery] string? team,
+        [FromQuery] List<Guid>? workerIds,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate)
         {
-
-
             var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate, endDate);
 
+            // Safety: ensure Worker navigation exists
+            attendanceData = attendanceData.Where(a => a.Worker != null).ToList();
+
+            // FILTER: Department
+            if (!string.IsNullOrWhiteSpace(department))
+            {
+                attendanceData = attendanceData
+                    .Where(a => a.Worker.DepartmentName != null &&
+                                a.Worker.DepartmentName.Equals(department, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            // FILTER: Team
+            if (!string.IsNullOrWhiteSpace(team))
+            {
+                attendanceData = attendanceData
+                    .Where(a => a.Worker.TeamName != null &&
+                                a.Worker.TeamName.Equals(team, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            // FILTER: Specific Workers
+            if (workerIds != null && workerIds.Count > 0)
+            {
+                attendanceData = attendanceData
+                    .Where(a => workerIds.Contains(a.WorkerId))
+                    .ToList();
+            }
+
+            // ---- SUMMARY REPORTS ----
+
             var departmentSummary = attendanceData
-                .GroupBy(a => a.Worker.DepartmentName)
+                .GroupBy(a => a.Worker.DepartmentName ?? "Unknown")
                 .Select(g => new
                 {
                     Department = g.Key,
@@ -174,19 +209,47 @@ namespace WorkersManagement.API.Controllers
                 });
 
             var teamSummary = attendanceData
-                .GroupBy(a => a.Worker.TeamName)
+                .GroupBy(a => a.Worker.TeamName ?? "Unknown")
                 .Select(g => new
                 {
                     Team = g.Key,
                     WorkerCount = g.Select(a => a.WorkerId).Distinct().Count()
                 });
 
+            // ---- WORKER DETAILS ----
+            var filteredWorkers = attendanceData
+                .Select(a => a.Worker)
+                .Distinct() // avoids duplicates
+                .Select(w => new
+                {
+                    w.WorkerNumber,
+                    w.FirstName,
+                    w.LastName,
+                    FullName = w.FirstName + " " + w.LastName,
+                    w.Email,
+                    w.DepartmentName,
+                    w.TeamName
+                })
+                .ToList();
+
+            var workersCsv = GenerateCsv(filteredWorkers);
             var deptCsv = GenerateCsv(departmentSummary);
             var teamCsv = GenerateCsv(teamSummary);
 
-            var combined = $"Department Summary\n{deptCsv}\n\nTeam Summary\n{teamCsv}";
-            return File(Encoding.UTF8.GetBytes(combined), "text/csv", $"worker_summary_{DateTime.UtcNow:yyyyMMdd}.csv");
+            // Combined output
+            var combined =
+                $"Department Summary\n{deptCsv}\n\n" +
+                $"Team Summary\n{teamCsv}\n\n" +
+                $"Filtered Workers\n{workersCsv}";
+
+            return File(
+                Encoding.UTF8.GetBytes(combined),
+                "text/csv",
+                $"worker_summary_{DateTime.UtcNow:yyyyMMdd}.csv"
+            );
         }
+
+
 
         #region reports helpers
         private string GenerateCsv<T>(IEnumerable<T> data)
