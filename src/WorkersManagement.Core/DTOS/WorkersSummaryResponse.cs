@@ -10,7 +10,9 @@ namespace WorkersManagement.Core.DTOS
         string Email,
         string DepartmentName,
         string QRCode,
-        string? ProfilePictureUrl
+        string? ProfilePictureUrl,
+        string WorkerNumber,
+        string WorkerType
     );
 
     public static class WorkerMapper
@@ -23,7 +25,11 @@ namespace WorkersManagement.Core.DTOS
                 worker.Email,
                 worker.Department?.Name ?? "Unassigned",
                 worker.QRCode,
-                worker.ProfilePictureUrl
+                worker.ProfilePictureUrl,
+                worker.WorkerNumber,
+                worker.Type != null && worker.Type.Any()
+                    ? string.Join(", ", worker.Type.Select(t => t.ToString()))
+                    : "Unassigned"
             );
         }
 

@@ -26,7 +26,8 @@ namespace WorkersManagement.Core.Repositories
             return new CreateSubTeamDto
             {
                 Name = subTeamDto.Name,
-                TeamName = subTeamDto.Team.Name
+                TeamName = subTeamDto.Team.Name,
+                Description = subTeamDto.Description
             };
         }
 
@@ -59,7 +60,7 @@ namespace WorkersManagement.Core.Repositories
                     Id = st.Id,
                     Name = st.Name,
                     Description = st.Description,
-                    
+                    TeamName = st.Team.Name
                 })
                 .ToListAsync();
         }

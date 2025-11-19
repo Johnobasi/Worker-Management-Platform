@@ -58,7 +58,8 @@ namespace WorkersManagement.API.Controllers
                     Id = Guid.NewGuid(),
                     Name = subTeamCreateDto.Name,
                     Team = selectedTeam,
-                    TeamId = selectedTeam.Id
+                    TeamId = selectedTeam.Id,
+                    Description = selectedTeam.Description
                 };
 
                 var createdSubTeam = await _subTeamService.CreateSubTeamAsync(subteamRequest);

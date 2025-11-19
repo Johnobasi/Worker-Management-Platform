@@ -10,6 +10,8 @@ namespace WorkersManagement.Domain.Dtos.SubTeam
         [Required(ErrorMessage = "Description is required.")]
         public string Description { get; set; }
         public Guid Id { get; set; }
+
+        public string TeamName { get; set; } = string.Empty;
     }
 
     public class CreateSubTeamDto
