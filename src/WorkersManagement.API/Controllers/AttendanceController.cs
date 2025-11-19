@@ -34,7 +34,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="qrCodeData">QR code content containing worker information</param>
         /// <returns>Attendance marking result</returns>
         [HttpPost("mark-workers-attendance")]
-        [Authorize(Policy = "Worker")]
+        [AllowAnonymous]
         public async Task<IActionResult> MarkAttendance([FromBody] string qrCodeData)
         {
             _logger.LogInformation("Received request to mark attendance...");
@@ -60,7 +60,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="checkInTime">Check-in date and time</param>
         /// <returns>Save confirmation</returns>
         [HttpPost("save")]
-        [Authorize(Policy = "Worker")]
+       [AllowAnonymous]
         public async Task<IActionResult> SaveAttendance([FromQuery] Guid workerId, [FromQuery] DateTime checkInTime)
         {
             _logger.LogInformation($"Received manual attendance save request for worker {workerId}...");
@@ -83,25 +83,12 @@ namespace WorkersManagement.API.Controllers
         /// <param name="startDate">Start date for filtering records</param>
         /// <returns>List of attendance records</returns>
         [HttpGet("worker/{workerId}")]
-        [Authorize(Policy = "Worker")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetWorkerAttendances(Guid workerId, [FromQuery] DateTime startDate)
         {
             _logger.LogInformation($"Fetching attendance records for worker {workerId} since {startDate:yyyy-MM-dd}...");
             try
             {
-                // Workers can only view their own attendance
-                if (User.IsInRole(UserRole.Worker.ToString()) && workerId.ToString() != User.FindFirst("WorkerId")?.Value)
-                    return Forbid("Workers can only view their own attendance records.");
-
-                // HODs can only view attendance for workers in their department
-                if (User.IsInRole(UserRole.HOD.ToString()))
-                {
-                    var worker = await _workersRepository.GetWorkerByIdAsync(workerId);
-                    var userDepartmentId = User.FindFirst("DepartmentId")?.Value;
-                    if (worker?.Department?.Id.ToString() != userDepartmentId)
-                        return Forbid("HODs can only view attendance for workers in their own department.");
-                }
-
                 var attendances = await _attendanceRepository.GetWorkerAttendances(workerId, startDate);
                 return Ok(attendances);
             }
@@ -119,7 +106,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="endDate">End date of range</param>
         /// <returns>All attendance records in date range</returns>
         [HttpGet]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAllAttendances([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
             _logger.LogInformation($"Fetching all attendances between {startDate:yyyy-MM-dd} and {endDate:yyyy-MM-dd}...");

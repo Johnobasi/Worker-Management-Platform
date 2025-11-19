@@ -26,7 +26,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="workerId">Worker identifier</param>
         /// <returns>Barcode image file</returns>
         [HttpGet("generate-download-barcode/{workerId}")]
-        [Authorize(Policy = "Admin")]
+         [AllowAnonymous]
         public async Task<IActionResult> DownloadWorkerBarcode(Guid workerId)
         {
             try
@@ -49,7 +49,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="workerId">Worker identifier</param>
         /// <returns>Assignment result</returns>
         [HttpPut("assign-worker-barcode")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> AssignUserToQRCode([FromQuery] Guid qrCodeId, [FromQuery] Guid workerId)
         {
             try
@@ -76,7 +76,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="workerId">Worker identifier</param>
         /// <returns>Disable result</returns>
         [HttpDelete("disable-worker-barcode/{workerId}")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> DisableWorkerQRCodes(Guid workerId)
         {
             try
@@ -98,7 +98,7 @@ namespace WorkersManagement.API.Controllers
         /// <param name="qrCodeId">Barcode identifier</param>
         /// <returns>Barcode information</returns>
         [HttpGet("get-worker-barcode/{qrCodeId}")]
-        [Authorize(Policy = "Worker")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(Guid qrCodeId)
         {
             var qrCode = await _barcodeRepository.GetBarCodeByIdAsync(qrCodeId);

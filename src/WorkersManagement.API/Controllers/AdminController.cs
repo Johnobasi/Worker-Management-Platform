@@ -265,7 +265,7 @@ namespace WorkersManagement.API.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [HttpGet("count-workers")]
-        [Authorize(Policy = "Admin")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetWorkersCount()
         {
             try
@@ -432,22 +432,6 @@ namespace WorkersManagement.API.Controllers
                 var worker = await _workersRepository.GetWorkerByIdAsync(id);
                 if (worker == null)
                     return NotFound("Worker not found.");
-
-                // Additional check for SubTeamLead and HOD
-                if (User.IsInRole(UserRole.SubTeamLead.ToString()) || User.IsInRole(UserRole.HOD.ToString()))
-                {
-                    var departments = await _departmentRepository.GetDepartmentByNameAsync(request.DepartmentName);
-                    if (departments == null)
-                        return BadRequest("Specified department does not exist.");
-
-                    var userDepartmentId = User.FindFirst("DepartmentId")?.Value;
-                    var userTeamId = User.FindFirst("TeamId")?.Value;
-
-                    if (User.IsInRole(UserRole.SubTeamLead.ToString()) && departments.TeamId.ToString() != userTeamId)
-                        return Forbid("SubTeamLeads can only update workers in their own subteam's departments.");
-                    if (User.IsInRole(UserRole.HOD.ToString()) && departments.Id.ToString() != userDepartmentId)
-                        return Forbid("HODs can only update workers in their own department.");
-                }
 
                 // Lookup department by name
                 var department = await _departmentRepository.GetDepartmentByNameAsync(request.DepartmentName);
