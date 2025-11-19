@@ -161,6 +161,33 @@ namespace WorkersManagement.Core.Repositories
 
         }
 
+        public async Task<List<Worker>> SearchWorkersAsync(string query)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(query))
+                    return new List<Worker>();
+
+                query = query.Trim().ToLower();
+
+                return await _context.Workers
+                    .Include(w => w.Department)
+                    .Include(w => w.Habits)
+                        .ThenInclude(h => h.Completions)
+                    .Where(w =>
+                        w.FirstName.ToLower().Contains(query) ||
+                        w.LastName.ToLower().Contains(query) ||
+                        w.Email.ToLower().Contains(query) ||
+                        w.WorkerNumber.ToLower().Contains(query)
+                    )
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching for workers");
+                return new List<Worker>();
+            }
+        }
         public async Task<Worker?> GetWorkerByIdAsync(Guid id)
         {
             try

@@ -14,5 +14,6 @@ namespace WorkersManagement.Domain.Interfaces
         Task<Worker> GetWorkerByNumberAsync(string workerNumber);
         Task<List<Worker>> GetAllWorkersForEmailAsync();
         Task<List<Worker>> GetWorkersByIdsAsync(List<Guid> workerIds);
+        Task<List<Worker>> SearchWorkersAsync(string query);
     }
 }

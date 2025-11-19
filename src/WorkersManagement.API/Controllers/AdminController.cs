@@ -328,6 +328,26 @@ namespace WorkersManagement.API.Controllers
         }
 
         /// <summary>
+        /// Searches workers by first name, last name, email, phone number, or worker number.
+        /// </summary>
+        /// <param name="q">
+        /// The search query string. Supports partial and case-insensitive matching.
+        /// </param>
+        /// <returns>
+        /// Returns a list of workers whose details match the search query.
+        /// </returns>
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchWorkers([FromQuery] string q)
+        {
+            if (string.IsNullOrWhiteSpace(q))
+                return BadRequest("Search query cannot be empty.");
+
+            var results = await _workersRepository.SearchWorkersAsync(q);
+
+            return Ok(results);
+        }
+
+        /// <summary>
         /// Get email addresses of selected workers
         /// </summary>
         /// <remarks>
