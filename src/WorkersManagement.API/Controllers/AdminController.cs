@@ -337,6 +337,7 @@ namespace WorkersManagement.API.Controllers
         /// Returns a list of workers whose details match the search query.
         /// </returns>
         [HttpGet("search")]
+        [AllowAnonymous]
         public async Task<IActionResult> SearchWorkers([FromQuery] string q)
         {
             if (string.IsNullOrWhiteSpace(q))
