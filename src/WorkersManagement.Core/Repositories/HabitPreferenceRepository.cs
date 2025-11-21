@@ -117,6 +117,8 @@ namespace WorkersManagement.Core.Repositories
                 });
             }
 
+
+            //results
             return result;
         }
 
