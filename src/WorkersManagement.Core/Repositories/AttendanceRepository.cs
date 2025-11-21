@@ -95,23 +95,24 @@ namespace WorkersManagement.Core.Repositories
                 if (string.IsNullOrWhiteSpace(qrCodeData))
                     throw new ArgumentException("QR code data is empty.");
 
-                // Step 1: Extract WorkerNumber from the string
+                // split scanned barcode content -> must contain workerNumber first
                 string[] parts = qrCodeData.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length < 1)
+                if (parts.Length == 0)
                     throw new ArgumentException("Invalid QR code format. Expected: 'WORKERNUMBER FirstName LastName'");
 
                 string workerNumber = parts[0];
 
-                // Step 2: Look up worker by WorkerNumber
+                // find worker by worker number
                 var worker = await _userRepository.GetWorkerByNumberAsync(workerNumber);
                 if (worker == null)
-                    throw new KeyNotFoundException("User not found.");
+                    throw new KeyNotFoundException("Worker not found.");
 
+                // find their active barcode
                 var qrCode = await _qrCodeRepository.GetBarcodeByWorkerIdAsync(worker.Id);
-                if (qrCode == null || qrCode.IsActive)
+                if (qrCode == null || !qrCode.IsActive)
                     throw new ArgumentException("QR code is invalid or disabled.");
 
-                // Step 3: Mark the attendance
+                // create attendance record
                 var attendance = new Attendance
                 {
                     WorkerId = worker.Id,
@@ -121,7 +122,8 @@ namespace WorkersManagement.Core.Repositories
                 };
 
                 await AddAttendanceAsync(attendance);
-                _logger.LogInformation($"✅ Attendance marked for {worker.WorkerNumber} - {worker.FirstName} {worker.LastName}");
+
+                _logger.LogInformation($"Attendance marked for {worker.WorkerNumber} - {worker.FirstName} {worker.LastName}");
                 return true;
             }
             catch (Exception ex)

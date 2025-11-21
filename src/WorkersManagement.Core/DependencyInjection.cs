@@ -32,6 +32,8 @@ namespace WorkersManagement.Core
             services.AddScoped<IJwt, JWTService>();
             services.AddHostedService<SundayRewardProcessor>();
 
+            services.AddScoped<IHabitPreference, HabitPreferenceRepository>();
+
             services.Configure<EmailSettings>(configuration.GetSection(nameof(EmailSettings)));
             return services;
         }

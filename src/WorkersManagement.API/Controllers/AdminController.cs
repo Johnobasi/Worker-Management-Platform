@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Core.DTOS;
 using WorkersManagement.Domain.Dtos;
+using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Dtos.Workers;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure.Enumerations;
@@ -21,11 +22,16 @@ namespace WorkersManagement.API.Controllers
         private readonly IWorkerManagementRepository _workersRepository;
         private readonly IDepartmentRepository _departmentRepository;
         private readonly ILogger<AdminController> _logger;
-        public AdminController(IWorkerManagementRepository workerRepository, IDepartmentRepository departmentRepository,ILogger<AdminController> logger)
+        private readonly IHabitPreference _habitService;
+        public AdminController(IWorkerManagementRepository workerRepository, 
+            IDepartmentRepository departmentRepository,
+            ILogger<AdminController> logger,
+            IHabitPreference habitService)
         {
             _workersRepository = workerRepository;
             _departmentRepository = departmentRepository;
             _logger = logger;
+            _habitService = habitService;
         }
 
 
@@ -137,7 +143,11 @@ namespace WorkersManagement.API.Controllers
                             .Split(',', StringSplitOptions.RemoveEmptyEntries)
                             .Select(r => Enum.Parse<WorkerType>(r.Trim(), true))
                             .ToList(),
-                            ProfilePicture = null
+                            ProfilePicture = null,
+                            HabitPreferences = row.Cell(6).GetString()
+                             .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(r => Enum.Parse<HabitType>(r.Trim(), true))
+                            .ToList()                                                   // Column F
                         };
 
                         var worker = await _workersRepository.CreateWorkerAsync(dto);
@@ -460,10 +470,21 @@ namespace WorkersManagement.API.Controllers
                 // Update fields
                 worker.FirstName = request.FirstName?.Trim();
                 worker.LastName = request.LastName?.Trim();
-                worker.Roles = request.Role.ToList();
+                worker.Type = request.WorkerType.ToList();
                 worker.Department = department;
 
                 await _workersRepository.UpdateWorkerAsync(worker);
+
+                // Update habit preferences if provided
+                if (request.HabitPreferences != null && request.HabitPreferences.Any())
+                {
+                    var updateDto = new UpdateHabitPreferencesRequest
+                    {
+                        Habits = request.HabitPreferences.ToList()
+                    };
+
+                    await _habitService.UpdateHabitPreferencesAsync(worker.Id, updateDto);
+                }
 
                 return Ok("Worker updated successfully.");
             }

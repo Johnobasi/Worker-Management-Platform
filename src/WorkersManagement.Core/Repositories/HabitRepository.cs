@@ -89,6 +89,20 @@ namespace WorkersManagement.Core.Repositories
             return true;
         }
 
+        public async Task LogHabitAsync(Guid workerId, HabitType habitType, string? notes = null)
+        {
+            var habit = new Habit
+            {
+                Id = Guid.NewGuid(),
+                WorkerId = workerId,
+                Type = habitType,
+                CompletedAt = DateTime.UtcNow,
+                Notes = notes
+            };
+
+            await _context.Habits.AddAsync(habit);
+            await _context.SaveChangesAsync();
+        }
         public async Task<bool> DeleteHabitAsync(Guid habitId)
         {
             var habit = await _context.Habits.FindAsync(habitId);

@@ -27,6 +27,9 @@ namespace WorkersManagement.Infrastructure
         public ICollection<WorkerReward> Rewards { get; set; }
         public Guid? DepartmentId { get; set; } // Explicit foreign key
         public bool IsConfirmed { get; set; }
+
+        // Navigation
+        public List<WorkerHabitPreference> HabitPreferences { get; set; } = new();
     }
 
 }

@@ -25,5 +25,9 @@ namespace WorkersManagement.Domain.Dtos
         public ICollection<WorkerType> WorkerType { get; set; }
 
         public IFormFile ProfilePicture { get; set; } = null;
+
+        [Required]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public List<HabitType> HabitPreferences { get; set; } = new();
     }
 }

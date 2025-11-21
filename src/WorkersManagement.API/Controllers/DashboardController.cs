@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
 using WorkersManagement.Infrastructure.Enumerations;
@@ -18,7 +19,8 @@ namespace WorkersManagement.API.Controllers
         IAttendanceRepository attendanceRepository,
         IWorkerRewardRepository workerRewardRepository,
         ILogger<DashboardController> logger,
-        IHabitCompletionRepository habitCompletionRepository) : ControllerBase
+        IHabitCompletionRepository habitCompletionRepository,
+        IHabitPreference habitPreference) : ControllerBase
     {
         private readonly IHabitRepository _habitRepository = habitRepository;
         private readonly IWorkerManagementRepository _workerRepository = workerRepository;
@@ -26,6 +28,7 @@ namespace WorkersManagement.API.Controllers
         private readonly IWorkerRewardRepository _workerRewardRepository = workerRewardRepository;
         private readonly ILogger<DashboardController> _logger = logger;
         private readonly IHabitCompletionRepository _habitCompletionRepository = habitCompletionRepository;
+        private readonly IHabitPreference _service = habitPreference;
 
         /// <summary>
         /// Get worker dashboard with statistics and habit progress
@@ -94,5 +97,32 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while retrieving the dashboard.");
             }
         }
+
+        /// <summary>
+        /// Retrieves the habit-based dashboard for a specific worker.
+        /// </summary>
+        /// <returns>
+        /// Returns a <see cref="DashboardResponse"/> containing the worker's
+        /// personalized dashboard based on their selected habit preferences.
+        /// </returns>
+        /// <response code="200">Dashboard successfully retrieved.</response>
+        /// <response code="404">Worker not found.</response>
+        /// <response code="500">An internal server error occurred.</response>
+        [HttpGet("worker/preffereddashboard")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPrefferedHabitDashboards()
+        {
+            var loggeInWorker = User.FindFirst("workerId")?.Value;
+            if (!Guid.TryParse(loggeInWorker, out Guid workerId))
+                return Unauthorized("Invalid worker ID.");
+
+            var dashboard = await _service.GetDashboardForWorkerAsync(workerId);
+
+            if (dashboard == null)
+                return NotFound($"Dashboard not found for worker with ID: {workerId}");
+
+            return Ok(dashboard);
+        }
+
     }
 }

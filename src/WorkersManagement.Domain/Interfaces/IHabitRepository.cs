@@ -18,5 +18,7 @@ namespace WorkersManagement.Domain.Interfaces
         Task<bool> MapHabitToWorkerAsync(Guid habitId, Guid workerId);
         Task<int> GetDailyCompletionCountAsync(Guid workerId, HabitType type, DateTime date);
         Task<List<Habit>> GetHabitsByWorkerAsync(Guid workerId);
+
+        Task LogHabitAsync(Guid workerId, HabitType habitType, string? notes = null);
     }
 }

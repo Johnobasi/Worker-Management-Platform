@@ -16,7 +16,9 @@ namespace WorkersManagement.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class HabitController(IHabitRepository habitService, ILogger<HabitController> logger, IHabitCompletionRepository habitCompletionRepository) : ControllerBase
+    public class HabitController(IHabitRepository habitService, 
+        ILogger<HabitController> logger, IHabitCompletionRepository habitCompletionRepository
+        ) : ControllerBase
     {
         private readonly IHabitRepository _habitService = habitService;
         private readonly ILogger<HabitController> _logger = logger;
@@ -258,6 +260,31 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while marking the habit as completed.");
             }
         }
+
+        /// <summary>
+        /// Logs a habit completion for a worker. 
+        /// This is used when a worker performs a habit (e.g., clicks a button to join NLP Prayer).
+        /// </summary>
+        /// <param name="workerId">The unique identifier of the worker performing the habit.</param>
+        /// <param name="habitType">The type of habit being logged (e.g., NLPPrayer, Fasting, Giving).</param>
+        /// <returns>
+        /// Returns 200 OK if the habit was successfully logged.
+        /// </returns>
+        /// <response code="200">Habit successfully logged.</response>
+        /// <response code="400">WorkerId is missing or invalid.</response>
+        /// <response code="500">An unexpected error occurred while logging the habit.</response>
+
+        [HttpPost("log")]
+        [AllowAnonymous]
+        public async Task<IActionResult> LogHabit([FromQuery] Guid workerId, [FromQuery] HabitType habitType)
+        {
+            if (workerId == Guid.Empty)
+                return BadRequest("Worker ID is required.");
+
+            await _habitService.LogHabitAsync(workerId, habitType, "Logged from frontend button.");
+            return Ok();
+        }
+
     }
     /// <summary>
     /// Habit completion request data

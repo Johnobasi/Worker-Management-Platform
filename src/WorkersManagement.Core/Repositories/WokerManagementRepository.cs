@@ -107,6 +107,18 @@ namespace WorkersManagement.Core.Repositories
                 await _context.Workers.AddAsync(workerToAdd);
                 await _context.SaveChangesAsync();
 
+                if (dto.HabitPreferences?.Any() == true)
+                {
+                    var preferences = dto.HabitPreferences.Select(habit => new WorkerHabitPreference
+                    {
+                        WorkerId = workerToAdd.Id,
+                        HabitType = habit
+                    }).ToList();
+
+                    await _context.WorkerHabitPreferences.AddRangeAsync(preferences);
+                    await _context.SaveChangesAsync();
+                }
+
                 await _authRepository.SendPasswordSetupEmailAsync(workerToAdd);
 
                 var jwtToken = _jwtService.GenerateJwtToken(workerToAdd);
