@@ -1,4 +1,5 @@
 ﻿using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Core.DTOS
 {
@@ -12,7 +13,8 @@ namespace WorkersManagement.Core.DTOS
         string QRCode,
         string? ProfilePictureUrl,
         string WorkerNumber,
-        string WorkerType
+        string WorkerType,
+        string HabitPreferences
     );
 
     public static class WorkerMapper
@@ -29,7 +31,10 @@ namespace WorkersManagement.Core.DTOS
                 worker.WorkerNumber,
                 worker.Type != null && worker.Type.Any()
                     ? string.Join(", ", worker.Type.Select(t => t.ToString()))
-                    : "Unassigned"
+                    : "Unassigned",
+                worker.HabitPreferences != null && worker.HabitPreferences.Any()
+                    ? string.Join(", ", worker.HabitPreferences.Select(hp => hp.HabitType.ToString()))
+                    : "No Preferences"
             );
         }
 

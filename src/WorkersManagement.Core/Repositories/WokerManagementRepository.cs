@@ -162,6 +162,7 @@ namespace WorkersManagement.Core.Repositories
             {
                 return await _context.Workers
                     .Include(d=>d.Department)
+                    .Include(w => w.HabitPreferences)
                     .AsNoTracking()
                     .ToListAsync();
             }

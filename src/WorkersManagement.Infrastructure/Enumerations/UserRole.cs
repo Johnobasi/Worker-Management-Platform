@@ -13,6 +13,8 @@ namespace WorkersManagement.Infrastructure.Enumerations
 
     public enum WorkerType
     {
+        SmallGroupLeader,
+        ZonalCoordinator,
         Worker,
         HOD,
         SubTeamLead,
