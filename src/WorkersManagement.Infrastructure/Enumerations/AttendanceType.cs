@@ -4,6 +4,7 @@
     {
         SundayService,
         MidweekService,
-        SpecialMeeting
+        WorkersMeeting,
+        SpecialServiceMeeting
     }
 }

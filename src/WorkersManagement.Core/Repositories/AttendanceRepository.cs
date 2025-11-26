@@ -88,15 +88,16 @@ namespace WorkersManagement.Core.Repositories
                             .FirstOrDefaultAsync();
 
                 // Count each attendance type
-                var sundayCount = attendances.Count(a => a.Type == AttendanceType.SundayService);
-                var midweekCount = attendances.Count(a => a.Type == AttendanceType.MidweekService);
-                var specialCount = attendances.Count(a => a.Type == AttendanceType.SpecialMeeting);
-                var totalCount = sundayCount + midweekCount + specialCount;
+                var sundayServiceCount = attendances.Count(a => a.Type == AttendanceType.SundayService);
+                var midweekServiceCount = attendances.Count(a => a.Type == AttendanceType.MidweekService);
+                var workersMeetingCount = attendances.Count(a => a.Type == AttendanceType.WorkersMeeting);
+                var specialCount = attendances.Count(a => a.Type == AttendanceType.SpecialServiceMeeting);
+                var totalCount = sundayServiceCount + midweekServiceCount + specialCount + workersMeetingCount;
 
                 // Build summary message
                 var summary = $"Hi {worker!.FirstName}, here’s your attendance summary this month:\n" +
-                              $"- Sunday Services: {sundayCount}\n" +
-                              $"- Midweek Services: {midweekCount}\n" +
+                              $"- Sunday Services: {sundayServiceCount}\n" +
+                              $"- Midweek Services: {midweekServiceCount}\n" +
                               $"- Special Meetings: {specialCount}\n " +
                               $"- Total Attendances as at now: {totalCount}\n\n" +
                               $"Keep up the great participation! 🌟";
@@ -194,7 +195,7 @@ namespace WorkersManagement.Core.Repositories
                 AttendanceType.MidweekService =>
                     $"Hi {name}, you have attended {monthlyCount} Wednesday midweek services this month.",
 
-                AttendanceType.SpecialMeeting =>
+                AttendanceType.SpecialServiceMeeting =>
                     $"Hi {name}, you have attended {monthlyCount} special meetings this month.",
 
                 _ => $"Hi {name}, thank you for staying consistent in attendance!"

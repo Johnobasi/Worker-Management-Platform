@@ -50,7 +50,7 @@ namespace WorkersManagement.Core.Repositories
                     a.CheckInTime.DayOfWeek == DayOfWeek.Wednesday &&
                     a.CheckInTime.TimeOfDay <= midweekCutoff
                 );
-                var specialEvents = weeklyAttendances.Count(a => a.Type == AttendanceType.SpecialMeeting);
+                var specialEvents = weeklyAttendances.Count(a => a.Type == AttendanceType.SpecialServiceMeeting);
                 var totalAttendance = sundayCount + midweekCount + specialEvents;
 
                 // 4️⃣ Count activities
