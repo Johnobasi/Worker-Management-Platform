@@ -65,6 +65,35 @@ namespace WorkersManagement.API.Controllers
                             : "£0.00"
                     }
                 );
+
+                // Special: Handle Giving types
+                var givingDetails = new List<object>();
+                if (habitGroups.TryGetValue(HabitType.Giving, out var givingHabits))
+                {
+                    var totalGiving = givingHabits.Sum(h => h.Amount ?? 0);
+
+                    // Group by giving type
+                    var givingByType = givingHabits
+                        .Where(h => h.GivingType.HasValue)
+                        .GroupBy(h => h.GivingType.Value)
+                        .ToDictionary(g => g.Key, g => g.Sum(h => h.Amount ?? 0));
+
+                    foreach (var kvp in givingByType)
+                    {
+                        givingDetails.Add(new
+                        {
+                            Type = kvp.Key.ToString(),
+                            Message = $"Hi {kvp.Key}, your total {kvp.Key} payment is £{kvp.Value:N2}"
+                        });
+                    }
+
+                    // Add total giving
+                    givingDetails.Add(new
+                    {
+                        Type = "Total Giving",
+                        Message = $"Your total giving across all types is £{totalGiving:N2}"
+                    });
+                }
                 // Worker info
                 var worker = await _workerRepository.GetWorkerByIdAsync(workerId);
                     
@@ -84,7 +113,7 @@ namespace WorkersManagement.API.Controllers
                         worker.Id,
                         Department = worker.Department?.Name
                     },
-                    Attendance = attendances.Count(),
+                    Attendance = attendances.SummaryMessages.Count(),
                     Reward = workerReward,
                     HabitSummary = habitSummary
                 };

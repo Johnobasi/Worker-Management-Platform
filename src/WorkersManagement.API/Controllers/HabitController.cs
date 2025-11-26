@@ -96,6 +96,7 @@ namespace WorkersManagement.API.Controllers
                     Type = request.Type,
                     Notes = request.Notes,
                     Amount = request.Amount,
+                    GivingType = request.GivingType,
                     CompletedAt = DateTime.UtcNow
 
                 };
@@ -285,6 +286,19 @@ namespace WorkersManagement.API.Controllers
             return Ok();
         }
 
+        /// <summary>
+        /// Get all giving types
+        /// </summary>
+        [HttpGet("giving-types")]
+        [AllowAnonymous]
+        public IActionResult GetGivingTypes()
+        {
+            var types = Enum.GetValues(typeof(GivingType))
+                            .Cast<GivingType>()
+                            .Select(gt => new { Id = (int)gt, Name = gt.ToString() })
+                            .ToList();
+            return Ok(types);
+        }
     }
     /// <summary>
     /// Habit completion request data

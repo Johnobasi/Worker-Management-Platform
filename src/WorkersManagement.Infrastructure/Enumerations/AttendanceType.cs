@@ -3,6 +3,7 @@
     public enum AttendanceType
     {
         SundayService,
-        Event
+        MidweekService,
+        SpecialMeeting
     }
 }

@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
@@ -71,15 +73,38 @@ namespace WorkersManagement.Core.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Attendance>> GetWorkerAttendances(Guid workerId, DateTime startDate)
+        public async Task<AttendanceSummaryResponse> GetWorkerAttendances(Guid workerId, DateTime startDate)
         {
             _logger.LogInformation($"Getting worker attendances...{workerId.ToString()}");
             try
             {
-                return await _context.Attendances
-                    .Where(a => a.WorkerId == workerId && a.CheckInTime >= startDate)
-                        .OrderByDescending(a => a.CheckInTime)
-                            .ToListAsync();
+
+                var attendances = await _context.Attendances
+                     .Where(a => a.WorkerId == workerId)
+                     .ToListAsync();
+
+                var worker = await _context.Workers
+                        .Where(w => w.Id == workerId)
+                            .FirstOrDefaultAsync();
+
+                // Count each attendance type
+                var sundayCount = attendances.Count(a => a.Type == AttendanceType.SundayService);
+                var midweekCount = attendances.Count(a => a.Type == AttendanceType.MidweekService);
+                var specialCount = attendances.Count(a => a.Type == AttendanceType.SpecialMeeting);
+                var totalCount = sundayCount + midweekCount + specialCount;
+
+                // Build summary message
+                var summary = $"Hi {worker!.FirstName}, here’s your attendance summary this month:\n" +
+                              $"- Sunday Services: {sundayCount}\n" +
+                              $"- Midweek Services: {midweekCount}\n" +
+                              $"- Special Meetings: {specialCount}\n " +
+                              $"- Total Attendances as at now: {totalCount}\n\n" +
+                              $"Keep up the great participation! 🌟";
+
+                return new AttendanceSummaryResponse
+                {
+                    SummaryMessages =  summary 
+                };
             }
             catch (Exception ex)
             {
@@ -133,7 +158,7 @@ namespace WorkersManagement.Core.Repositories
             }
         }
 
-        public async Task SaveAttendance(Guid workerId, DateTime checkInTime)
+        public async Task SaveAttendance(Guid workerId, DateTime checkInTime, AttendanceType attendanceType)
         {
             _logger.LogInformation($"Saving attendance for worker {workerId.ToString()}...");
             try
@@ -143,7 +168,9 @@ namespace WorkersManagement.Core.Repositories
                     Id = Guid.NewGuid(),
                     WorkerId = workerId,
                     CheckInTime = checkInTime,
-                    Status = AttendanceStatus.Present
+                    Status = AttendanceStatus.Present,
+                    Type = attendanceType,
+                    CreatedAt = DateTime.UtcNow,
                 };
 
                 _context.Attendances.Add(attendance);
@@ -156,6 +183,23 @@ namespace WorkersManagement.Core.Repositories
 
         }
 
+
+        private string BuildAttendanceMessage(string name, AttendanceType type, int monthlyCount)
+        {
+            return type switch
+            {
+                AttendanceType.SundayService =>
+                    $"Hi {name}, you have attended {monthlyCount} Sunday services this month.",
+
+                AttendanceType.MidweekService =>
+                    $"Hi {name}, you have attended {monthlyCount} Wednesday midweek services this month.",
+
+                AttendanceType.SpecialMeeting =>
+                    $"Hi {name}, you have attended {monthlyCount} special meetings this month.",
+
+                _ => $"Hi {name}, thank you for staying consistent in attendance!"
+            };
+        }
 
     }
 }

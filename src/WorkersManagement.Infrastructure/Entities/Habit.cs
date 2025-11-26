@@ -14,5 +14,14 @@ namespace WorkersManagement.Infrastructure
         public Worker Worker { get;  set; }
         public decimal? Amount { get; set; } // Amount is optional and applies to 'Giving' type habits
         public ICollection<HabitCompletion> Completions { get; set; } = new List<HabitCompletion>();
+        public GivingType? GivingType { get; set; } // only used if Type == Giving
+    }
+
+    public enum GivingType
+    {
+        Tithe,
+        Offering,
+        FoodBank,
+        OtherKingdomDonations
     }
 }

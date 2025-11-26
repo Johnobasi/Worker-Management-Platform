@@ -27,6 +27,9 @@ namespace WorkersManagement.API
                         .AllowAnyMethod();
                 });
             });
+
+            
+
             builder.Services.AddControllers()
              .AddJsonOptions(options =>
              {

@@ -1,63 +1,47 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Quartz;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
 
 namespace WorkersManagement.Core.BackGroundJob
 {
-    public class SundayRewardProcessor : BackgroundService
+    public class SundayRewardProcessor : IJob
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<SundayRewardProcessor> _logger;
-        private readonly TimeSpan _checkInterval = TimeSpan.FromMinutes(15);
 
-        public SundayRewardProcessor(
-            IServiceScopeFactory scopeFactory,
-            ILogger<SundayRewardProcessor> logger)
+        public SundayRewardProcessor(IServiceScopeFactory scopeFactory, ILogger<SundayRewardProcessor> logger)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
         }
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+
+        public async Task Execute(IJobExecutionContext context)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            _logger.LogInformation("Starting Sunday reward processing...");
+
+            using var scope = _scopeFactory.CreateScope();
+            var rewardRepo = scope.ServiceProvider.GetRequiredService<IWorkerRewardRepository>();
+            var dbContext = scope.ServiceProvider.GetRequiredService<WorkerDbContext>();
+
+            // Get all worker IDs
+            var workerIds = await dbContext.Workers.Select(w => w.Id).ToListAsync();
+
+            foreach (var workerId in workerIds)
             {
-                using var scope = _scopeFactory.CreateScope();
-                var workerRewardRepository = scope.ServiceProvider.GetRequiredService<IWorkerRewardRepository>();
-                var context = scope.ServiceProvider.GetRequiredService<WorkerDbContext>();
-
-                var currentTime = DateTime.Now;
-
-                if (workerRewardRepository.IsSunday(currentTime) && IsScheduledTime(currentTime))
+                try
                 {
-                    var activeWorkers = await context.Workers
-                        .Where(w => w.Status.HasValue)
-                        .ToListAsync(stoppingToken);
-
-                    foreach (var worker in activeWorkers)
-                    {
-                        try
-                        {
-                            await workerRewardRepository.ProcessSundayAttendance(worker.Id, currentTime);
-                            _logger.LogInformation($"Successfully processed attendance for worker: {worker.Id}");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError($"Failed to process attendance for worker {worker.Id}: {ex.Message}");
-                        }
-                    }
+                    await rewardRepo.CheckAndProcessReward(workerId);
                 }
-
-                await Task.Delay(_checkInterval, stoppingToken);
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to process reward for worker {workerId}");
+                }
             }
-        }
 
-        private static bool IsScheduledTime(DateTime currentTime)
-        {
-            // Run at 10:00 AM UTC on Sundays
-            return currentTime.Hour == 14 && currentTime.Minute == 0;
+            _logger.LogInformation("Sunday reward processing completed.");
         }
     }
 }

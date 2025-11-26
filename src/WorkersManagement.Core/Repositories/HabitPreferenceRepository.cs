@@ -1,9 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
@@ -115,8 +110,39 @@ namespace WorkersManagement.Core.Repositories
                     Streak = streak,
                     Message = message
                 });
-            }
 
+                // Special handling for Giving
+                if (pref.HabitType == HabitType.Giving)
+                {
+                    // Group by GivingType
+                    var givingByType = habitLogs
+                        .Where(h => h.GivingType.HasValue)
+                        .GroupBy(h => h.GivingType.Value)
+                        .ToDictionary(g => g.Key, g => g.Sum(h => h.Amount ?? 0));
+
+                    decimal totalGiving = givingByType.Values.Sum();
+
+                    foreach (var kvp in givingByType)
+                    {
+                        result.GivingDetails.Add(new GivingDashboardItem
+                        {
+                            GivingType = kvp.Key,
+                            MonthlyAmount = monthlyLogs.Where(l => l.GivingType == kvp.Key).Sum(l => l.Amount ?? 0),
+                            AllTimeAmount = kvp.Value,
+                            Message = $"Hi {worker.FirstName}, your total {kvp.Key} payment is £{kvp.Value:N2}"
+                        });
+                    }
+
+                    // Add total giving
+                    result.GivingDetails.Add(new GivingDashboardItem
+                    {
+                        GivingType = null,
+                        MonthlyAmount = monthlyLogs.Sum(l => l.Amount ?? 0),
+                        AllTimeAmount = totalGiving,
+                        Message = $"Your total giving across all types is £{totalGiving:N2}"
+                    });
+                }
+            }
 
             //results
             return result;

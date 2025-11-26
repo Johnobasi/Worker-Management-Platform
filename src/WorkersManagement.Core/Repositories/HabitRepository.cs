@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Data.Common;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
@@ -20,24 +21,56 @@ namespace WorkersManagement.Core.Repositories
         public async Task<Habit> AddHabitAsync(Habit habit, Guid loggedInWorkerId)
         {
 
-            if (!Enum.IsDefined(typeof(HabitType), habit.Type))
-                throw new ArgumentException("Invalid habit type");
+            try
+            {
+                if (!Enum.IsDefined(typeof(HabitType), habit.Type))
+                    throw new ArgumentException("Invalid habit type");
 
-            habit.WorkerId = loggedInWorkerId;
+                habit.WorkerId = loggedInWorkerId;
 
-            var workerExists = await _context.Workers
-                .AnyAsync(w => w.Id == loggedInWorkerId);
+                // If giving, ensure giving type is provided
+                if (!habit.GivingType.HasValue)
+                    throw new ArgumentException("Giving type must be specified for Giving habit.");
 
-            _context.Habits.Add(habit);
-            await _context.SaveChangesAsync();
-            return habit;
+                var workerExists = await _context.Workers
+                    .AnyAsync(w => w.Id == loggedInWorkerId);
 
+                var request = new Habit
+                {
+                    Id = Guid.NewGuid(),
+                    WorkerId = loggedInWorkerId,
+                    Type = habit.Type,
+                    Notes = habit.Notes,
+                    Amount = habit.Amount,
+                    GivingType = habit.GivingType, // store the selected giving type
+                    CompletedAt = DateTime.UtcNow
+                };
+                _context.Habits.Add(request);
+                await _context.SaveChangesAsync();
+                return habit;
+            }
+            catch (DbException ex)
+            {
+               _logger.LogError(ex, "Database error occurred while adding habit.");
+                return new Habit();
+            }
         }
 
         public async Task<int> GetDailyCompletionCountAsync(Guid workerId, HabitType type, DateTime date)
         {
-            return await _context.Habits
-                .CountAsync(h => h.WorkerId == workerId && h.Type == type && h.CompletedAt! == date.Date);
+            try
+            {
+                return await _context.Habits
+                    .CountAsync(h => h.WorkerId == workerId 
+                    && h.Type == type 
+                    && h.CompletedAt! == date.Date);
+            }
+            catch (DbException ex)
+            {
+                _logger.LogError(ex, "Database error occurred while counting daily habit completions.");
+                return 0;
+            }
+
         }
         public async Task<IEnumerable<Habit>> GetHabitsByTypeAsync(Guid workerId, HabitType type)
         {
@@ -77,54 +110,99 @@ namespace WorkersManagement.Core.Repositories
 
         public async Task<bool> UpdateHabitAsync(UpdateHabitDto habit)
         {
-            var existing = await _context.Habits.FindAsync(habit.Id);
-            if (existing == null) return false;
+            try
+            {
+                var existing = await _context.Habits.FindAsync(habit.Id);
+                if (existing == null) return false;
 
-            existing.Type = habit.Type;
-            existing.CompletedAt = habit.CompletedAt;
-            existing.Notes = habit.Notes;
-            existing.Amount = habit.Amount;
+                existing.Type = habit.Type;
+                existing.CompletedAt = habit.CompletedAt;
+                existing.Notes = habit.Notes;
+                existing.Amount = habit.Amount;
 
-            await _context.SaveChangesAsync();
-            return true;
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbException ex)
+            {
+                _logger.LogError(ex, "Database error occurred while updating habit.");
+                return false;
+            }
         }
 
         public async Task LogHabitAsync(Guid workerId, HabitType habitType, string? notes = null)
         {
-            var habit = new Habit
+            try
             {
-                Id = Guid.NewGuid(),
-                WorkerId = workerId,
-                Type = habitType,
-                CompletedAt = DateTime.UtcNow,
-                Notes = notes
-            };
+                var habit = new Habit
+                {
+                    Id = Guid.NewGuid(),
+                    WorkerId = workerId,
+                    Type = habitType,
+                    CompletedAt = DateTime.UtcNow,
+                    Notes = notes
+                };
 
-            await _context.Habits.AddAsync(habit);
-            await _context.SaveChangesAsync();
+                await _context.Habits.AddAsync(habit);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbException ex)
+            {
+                _logger.LogError(ex, "Database error occurred while logging habit.");
+            }
+
         }
         public async Task<bool> DeleteHabitAsync(Guid habitId)
         {
-            var habit = await _context.Habits.FindAsync(habitId);
-            if (habit == null) 
+            try
+            {
+                var habit = await _context.Habits.FindAsync(habitId);
+                if (habit == null)
 
+                    return false;
+
+                _context.Habits.Remove(habit);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbException ex)
+            {
+                _logger.LogError(ex, "Database error occurred while deleting habit.");
                 return false;
+            }
 
-            _context.Habits.Remove(habit);
-            await _context.SaveChangesAsync();
-            return true;
         }
 
         public async Task<Habit?> GetHabitsByIdAsync(Guid habitId)
         {
-            return await _context.Habits
-                .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == habitId);
+            try
+            {
+                return await _context.Habits
+                  .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == habitId);
+            }
+            catch (DbException ex)
+            {
+                _logger.LogError(ex, "Database error occurred while retrieving habit by ID.");
+                return new Habit();
+            }
+
         }
 
         public async Task<IEnumerable<Habit>> GetAllHabit()
         {
-            return await _context.Habits.AsNoTracking().ToListAsync();
+            try
+            {
+                return await _context.Habits
+                    .AsNoTracking()
+                        .ToListAsync();
+            }
+            catch (DbException ex)
+            {
+                _logger.LogError(ex, "Database error occurred while retrieving all habits.");
+                return Enumerable.Empty<Habit>();
+            }
+
         }
 
         public async Task<bool> MapHabitToWorkerAsync(Guid habitId, Guid workerId)

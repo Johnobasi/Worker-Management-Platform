@@ -58,15 +58,16 @@ namespace WorkersManagement.API.Controllers
         /// </summary>
         /// <param name="workerId">Worker identifier</param>
         /// <param name="checkInTime">Check-in date and time</param>
+        /// <param name="attendanceType">Check-in date and time</param>
         /// <returns>Save confirmation</returns>
         [HttpPost("save")]
-       [AllowAnonymous]
-        public async Task<IActionResult> SaveAttendance([FromQuery] Guid workerId, [FromQuery] DateTime checkInTime)
+        [AllowAnonymous]
+        public async Task<IActionResult> SaveAttendance([FromQuery] Guid workerId, [FromQuery] DateTime checkInTime, [FromQuery] AttendanceType attendanceType)
         {
             _logger.LogInformation($"Received manual attendance save request for worker {workerId}...");
             try
             {
-                await _attendanceRepository.SaveAttendance(workerId, checkInTime);
+                await _attendanceRepository.SaveAttendance(workerId, checkInTime,attendanceType);
                 return Ok("Attendance saved.");
             }
             catch (Exception ex)
@@ -120,6 +121,23 @@ namespace WorkersManagement.API.Controllers
                 _logger.LogError(ex, "Error fetching attendance records.");
                 return StatusCode(500, "Internal server error.");
             }
+        }
+
+        /// <summary>
+        /// Get all attendance types
+        /// </summary>
+        [HttpGet("get-types")]
+        public IActionResult GetAttendanceTypes()
+        {
+            var types = Enum.GetValues(typeof(AttendanceType))
+                            .Cast<AttendanceType>()
+                            .Select(t => new
+                            {
+                                Id = (int)t,
+                                Name = t.ToString()
+                            });
+
+            return Ok(types);
         }
     }
 }

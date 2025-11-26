@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.Dtos;
@@ -10,85 +9,68 @@ using WorkersManagement.Infrastructure.Enumerations;
 namespace WorkersManagement.Core.Repositories
 {
     public class WorkerRewardRepository(
-        IAttendanceRepository attendanceRepository, IEmailService emailService,
-        WorkerDbContext context, IWorkerManagementRepository user, IConfiguration configuration,
+       IEmailService emailService,
+        WorkerDbContext context, IWorkerManagementRepository user,
         ILogger<WorkerRewardRepository> logger) : IWorkerRewardRepository
     {
-        private readonly IAttendanceRepository _attendanceRepository = attendanceRepository;
         private readonly IEmailService _emailService = emailService;
-        private readonly IConfiguration configuratin = configuration;
-        private readonly int _consecutiveSundaysRequired = configuration!.GetValue<int>("RewardSettings:ConsecutiveSundaysRequired");
-        private readonly int _earlyCheckInHour = configuration!.GetValue<int>("RewardSettings:EarlyCheckInHour");
         private readonly WorkerDbContext _context = context;
         private readonly IWorkerManagementRepository _user = user;
         private readonly ILogger<WorkerRewardRepository> _logger = logger;
 
-        public async Task ProcessSundayAttendance(Guid workerId, DateTime checkInTime)
-        {
-            _logger.LogInformation($"Processing Sunday attendance for worker {workerId}");
-            try
-            {
-                if (!IsSunday(checkInTime)) return;
-
-                var isEarlyCheckIn = IsEarlyCheckIn(checkInTime);
-                if (!isEarlyCheckIn) return;
-
-                await _attendanceRepository.SaveAttendance(workerId, checkInTime);
-                await CheckAndProcessReward(workerId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex.Message);
-
-            }
-
-        }
         public async Task CheckAndProcessReward(Guid workerId)
         {
-            var consecutiveSundays = await GetConsecutiveEarlySundays(workerId);
 
-            if (consecutiveSundays >= _consecutiveSundaysRequired)
-            {
-                await CreateReward(workerId);
-                await NotifyWorker(workerId);
-                await ResetConsecutiveCount(workerId);
-            }
-        }
-        public async Task<int> GetConsecutiveEarlySundays(Guid workerId)
-        {
-            var attendances = await _attendanceRepository.GetWorkerAttendances(
-                workerId,
-                DateTime.UtcNow.AddDays(-_consecutiveSundaysRequired * 7)
-            );
-
-            return CalculateConsecutiveSundays(attendances);
-        }
-
-        public int CalculateConsecutiveSundays(IEnumerable<Attendance> attendances)
-        {
-            var count = 0;
-            var lastSunday = DateTime.UtcNow.Date;
-
-            foreach (var attendance in attendances.OrderByDescending(a => a.CheckInTime))
-            {
-                if (!IsSunday(attendance.CheckInTime) ||
-                    !IsEarlyCheckIn(attendance.CheckInTime) ||
-                    !IsConsecutiveSunday(attendance.CheckInTime, lastSunday))
-                {
-                    break;
-                }
-
-                count++;
-                lastSunday = attendance.CheckInTime.Date.AddDays(-7);
-            }
-
-            return count;
-        }
-
-        public async Task CreateReward(Guid workerId)
-        {
             try
             {
+                // 1️⃣ Fetch all attendances in the week
+                var weeklyAttendances = await _context.Attendances
+                    .Where(a => a.WorkerId == workerId)
+                    .ToListAsync();
+
+                // 2️⃣ Fetch all spiritual activities in the week
+                var weeklyActivities = await _context.Habits
+                    .Where(a => a.WorkerId == workerId)
+                    .ToListAsync();
+
+                var sundayCutoff = new TimeSpan(9, 0, 0);       // 9:00 AM
+                var midweekCutoff = new TimeSpan(18, 45, 0);    // 6:45 PM
+
+
+                // Sunday early attendance (must be Sunday + before 9:00 AM)
+                var sundayCount = weeklyAttendances.Count(a =>
+                    a.Type == AttendanceType.SundayService &&
+                    a.CheckInTime.DayOfWeek == DayOfWeek.Sunday &&
+                    a.CheckInTime.TimeOfDay <= sundayCutoff
+                );
+
+                // Midweek early attendance (must be Wednesday + before 6:45 PM)
+                var midweekCount = weeklyAttendances.Count(a =>
+                    a.Type == AttendanceType.MidweekService &&
+                    a.CheckInTime.DayOfWeek == DayOfWeek.Wednesday &&
+                    a.CheckInTime.TimeOfDay <= midweekCutoff
+                );
+                var specialEvents = weeklyAttendances.Count(a => a.Type == AttendanceType.SpecialMeeting);
+                var totalAttendance = sundayCount + midweekCount + specialEvents;
+
+                // 4️⃣ Count activities
+                var nlpCount = weeklyActivities.Count(a => a.Type == HabitType.NLPPrayer);
+                var bibleCount = weeklyActivities.Count(a => a.Type == HabitType.BibleStudy);
+                var devotionalCount = weeklyActivities.Count(a => a.Type == HabitType.Devotionals);
+                var fastingCount = weeklyActivities.Count(a => a.Type == HabitType.Fasting);
+                var givingCount = weeklyActivities.Count(a => a.Type == HabitType.Giving);
+
+                // 5️⃣ Determine eligibility
+                var qualifiesForReward = totalAttendance >= 4
+                    && nlpCount >= 5
+                    && bibleCount >= 5
+                    && devotionalCount >= 5
+                    && fastingCount >= 2
+                    && givingCount >= 4; // 4–5 Sundays giving
+
+                if (!qualifiesForReward) return;
+
+                // 6️⃣ Create reward
                 var reward = new WorkerReward
                 {
                     Id = Guid.NewGuid(),
@@ -99,50 +81,85 @@ namespace WorkersManagement.Core.Repositories
                 };
 
                 await _context.WorkerRewards.AddAsync(reward);
+                await _context.SaveChangesAsync();
+
+                // 7️⃣ Notify worker
+                await NotifyWorker(workerId, weeklyAttendances, weeklyActivities);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
             }
 
-        }
-
-        public async Task NotifyWorker(Guid workerId)
-        {
-            var user = await _user.GetWorkerByIdAsync(workerId);
-
-            var emailSubject = "Congratulations! You've Earned a Gift Voucher";
-            var emailBody = $@"
-            Dear {user.FirstName},
             
-            Congratulations! You have successfully maintained early attendance for 15 consecutive Sundays.
-            As a token of our appreciation, you have earned a gift voucher.
-            
-            Please collect your gift voucher from the church office.
-            
-            Thank you for your dedication and commitment.
-            
-            Best regards,
-            Church Management Team
-            ";
-
-            await _emailService.SendEmailAsync(user.Email, emailSubject, emailBody);
         }
 
-        public bool IsSunday(DateTime date)
+        public async Task ProcessAllRewardsAsync()
         {
-            return date.DayOfWeek == DayOfWeek.Sunday;
+            try
+            {
+                // Fetch all active workers
+                var allWorkers = await _context.Workers
+                    .AsNoTracking()
+                    .Select(w => w.Id)
+                    .ToListAsync();
+
+                foreach (var workerId in allWorkers)
+                {
+                    await CheckAndProcessReward(workerId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing rewards for all workers.");
+            }
         }
 
-        public bool IsEarlyCheckIn(DateTime checkInTime)
+        public async Task NotifyWorker(Guid workerId, List<Attendance> weeklyAttendances, List<Habit> weeklyActivities)
         {
-            var configuredHour = _earlyCheckInHour;
-            return checkInTime.Hour <= configuredHour;
+            try
+            {
+                var worker = await _user.GetWorkerByIdAsync(workerId);
+
+                var emailSubject = "Congratulations! You've Earned a Gift Voucher";
+                var emailBody = $@"
+                Dear {worker.FirstName},
+            
+                Congratulations! 🌟
+
+                This month, you have recorded the highest spiritual habits among your peers. 
+                
+                Here’s a summary of your activities:
+
+                - Early Sunday Attendance: {weeklyAttendances.Count(a => a.Type == AttendanceType.SundayService)} days
+                - Midweek Service Attendance: {weeklyAttendances.Count(a => a.Type == AttendanceType.MidweekService)} days
+                - NLP Prayer: {weeklyActivities.Count(a => a.Type == HabitType.NLPPrayer)} times
+                - Bible Reading: {weeklyActivities.Count(a => a.Type == HabitType.BibleStudy)} times
+                - Devotional: {weeklyActivities.Count(a => a.Type == HabitType.Devotionals)} days
+                - Fasting: {weeklyActivities.Count(a => a.Type == HabitType.Fasting)} days
+                - Giving: {weeklyActivities.Count(a => a.Type == HabitType.Giving)} Sundays
+
+                As a token of our appreciation for your dedication and faithfulness, you have earned a gift voucher. 
+
+                Please collect your gift voucher from the church office at your convenience.
+
+                Thank you for your commitment and inspiring example!
+            
+                Best regards,
+                Church Management Team
+                ";
+
+                await _emailService.SendEmailAsync(worker.Email, emailSubject, emailBody);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+            
         }
-        public static bool IsConsecutiveSunday(DateTime current, DateTime previous)
-        {
-            return (previous - current).Days == 7;
-        }
+
+
 
         public async Task SaveReward(WorkerReward reward)
         {
@@ -182,12 +199,16 @@ namespace WorkersManagement.Core.Repositories
             try
             {
                 var rewards = await _context.WorkerRewards
-                 .Where(r => r.WorkerId == workerId)
-                     .ToListAsync();
+                    .Where(r => r.WorkerId == workerId)
+                        .OrderByDescending(r => r.CreatedAt)
+                             .ToListAsync();
                 var response = new WorkerRewardResponse
                 {
                     Rewards = rewards,
-                    Message = rewards.Count == 0 ? "The worker has no rewards at this time." : "Rewards retrieved successfully."
+                    Message = rewards.Count == 0 ? "The worker has no rewards at this time." : "🎉 Congratulations!\n\n" +                         
+                                                    "You’ve earned a Gift Voucher for your outstanding participation and spiritual commitment this month.\n" +
+                                                    "Thank you for your consistency in services and spiritual habits! \n" +
+                                                    "Please your team pastor for your Gift Voucher!"
                 };
 
                 return response;
@@ -201,6 +222,15 @@ namespace WorkersManagement.Core.Repositories
                 };
             }
 
+        }
+    }
+
+    public static class DateTimeExtensions
+    {
+        public static DateTime StartOfWeek(this DateTime dt, DayOfWeek startOfWeek = DayOfWeek.Monday)
+        {
+            int diff = (7 + (dt.DayOfWeek - startOfWeek)) % 7;
+            return dt.Date.AddDays(-1 * diff);
         }
     }
 }

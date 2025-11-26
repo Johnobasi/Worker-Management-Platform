@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Quartz;
 using WorkersManagement.Core.Abstract;
 using WorkersManagement.Core.BackGroundJob;
 using WorkersManagement.Core.Repositories;
@@ -30,11 +31,28 @@ namespace WorkersManagement.Core
 
             services.AddScoped<ITemplateDesignerService, TemplateDesignerService>();
             services.AddScoped<IJwt, JWTService>();
-            services.AddHostedService<SundayRewardProcessor>();
 
             services.AddScoped<IHabitPreference, HabitPreferenceRepository>();
 
             services.Configure<EmailSettings>(configuration.GetSection(nameof(EmailSettings)));
+            services.AddQuartzHostedService(q =>
+            {
+                q.WaitForJobsToComplete = true;
+            });
+
+            services.AddQuartz(configure =>
+            {
+                var jobKey = new JobKey(nameof(SundayRewardProcessor));
+
+                configure.AddJob<SundayRewardProcessor>(opts => opts.WithIdentity(jobKey));
+                configure.AddTrigger(opts => opts
+                    .ForJob(jobKey)
+                    .WithIdentity("SundayRewardTrigger")
+                    .WithCronSchedule("0 0 10 ? * SAT *"));
+
+                configure.UseMicrosoftDependencyInjectionJobFactory();
+            });
+
             return services;
         }
     }
