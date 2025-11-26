@@ -98,6 +98,7 @@ namespace WorkersManagement.Core.Repositories
                 var summary = $"Hi {worker!.FirstName}, here’s your attendance summary this month:\n" +
                               $"- Sunday Services: {sundayServiceCount}\n" +
                               $"- Midweek Services: {midweekServiceCount}\n" +
+                              $"- Workers Meetings: {workersMeetingCount}\n" +
                               $"- Special Meetings: {specialCount}\n " +
                               $"- Total Attendances as at now: {totalCount}\n\n" +
                               $"Keep up the great participation! 🌟";
