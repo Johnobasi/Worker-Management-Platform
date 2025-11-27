@@ -29,8 +29,10 @@ namespace WorkersManagement.Core.Repositories
                 habit.WorkerId = loggedInWorkerId;
 
                 // If giving, ensure giving type is provided
-                if (!habit.GivingType.HasValue)
+                if (habit.Type == HabitType.Giving && !habit.GivingType.HasValue)
+                {
                     throw new ArgumentException("Giving type must be specified for Giving habit.");
+                }
 
                 var workerExists = await _context.Workers
                     .AnyAsync(w => w.Id == loggedInWorkerId);

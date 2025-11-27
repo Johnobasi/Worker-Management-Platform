@@ -18,6 +18,7 @@ namespace WorkersManagement.Infrastructure.Enumerations
         Worker,
         HOD,
         SubTeamLead,
-        TeamPastor
+        TeamPastor,
+        CampusPastor
     }
 }

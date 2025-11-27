@@ -26,6 +26,11 @@ namespace WorkersManagement.Infrastructure.Configurations
 
             builder.Property(h => h.Amount)
                 .HasColumnType("decimal(18,2)");
+
+            builder.Property(h => h.GivingType)
+                .HasConversion<string>()        // ⭐ THIS IS THE CHANGE
+                .HasMaxLength(100)              // good practice
+                .IsRequired(false);
         }
     }
 }

@@ -108,8 +108,17 @@ namespace WorkersManagement.API.Controllers
                     return Unauthorized("Invalid worker identity.");
                 }
 
-                await _habitService.AddHabitAsync(habit, loggedInWorkerId);
-                return Ok("Habit successfully added.");
+                try
+                {
+                    await _habitService.AddHabitAsync(habit, loggedInWorkerId);
+                    return Ok("Habit successfully added.");
+
+                }
+                catch (ArgumentException ex)
+                {
+                    return BadRequest(new { Error = ex.Message });
+                }
+
             }
             catch (Exception ex)
             {
