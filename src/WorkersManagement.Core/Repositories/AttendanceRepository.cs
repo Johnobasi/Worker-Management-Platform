@@ -163,6 +163,21 @@ namespace WorkersManagement.Core.Repositories
         public async Task SaveAttendance(Guid workerId, DateTime checkInTime, AttendanceType attendanceType)
         {
             _logger.LogInformation($"Saving attendance for worker {workerId.ToString()}...");
+            if (!IsValidAttendanceTime(attendanceType, checkInTime))
+            {
+                string message = attendanceType switch
+                {
+                    AttendanceType.SundayService =>
+                        "You can only mark Sunday Service attendance on Sundays between 8:30 AM and 7:00 PM.",
+
+                    AttendanceType.MidweekService =>
+                        "You can only mark Midweek Service attendance on Wednesdays between 6:45 PM and 8:30 PM.",
+
+                    _ => "Attendance cannot be marked at this time."
+                };
+
+                throw new InvalidOperationException(message);
+            }
             try
             {
                 var attendance = new Attendance
@@ -185,7 +200,24 @@ namespace WorkersManagement.Core.Repositories
 
         }
 
+        private bool IsValidAttendanceTime(AttendanceType type, DateTime checkInTime)
+        {
+            var timeOfDay = checkInTime.TimeOfDay;
+            var dayOfWeek = checkInTime.DayOfWeek;
 
+            return type switch
+            {
+                AttendanceType.SundayService =>
+                    dayOfWeek == DayOfWeek.Sunday &&
+                    timeOfDay >= new TimeSpan(8, 0, 0) && timeOfDay <= new TimeSpan(19, 0, 0),
+
+                AttendanceType.MidweekService =>
+                    dayOfWeek == DayOfWeek.Wednesday &&
+                    timeOfDay >= new TimeSpan(18, 45, 0) && timeOfDay <= new TimeSpan(20, 30, 0),
+
+                _ => true // other attendance types are not restricted
+            };
+        }
         private string BuildAttendanceMessage(string name, AttendanceType type, int monthlyCount)
         {
             return type switch
