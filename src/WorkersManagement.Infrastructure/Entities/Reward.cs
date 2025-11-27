@@ -1,14 +1,17 @@
-﻿namespace WorkersManagement.Infrastructure
+﻿using WorkersManagement.Infrastructure.Enumerations;
+
+namespace WorkersManagement.Infrastructure
 {
     public class Reward
     {
-        public Guid Id { get; private set; }
-        public string Name { get; private set; }
-        public string Description { get; private set; }
-        public int PointsRequired { get; private set; }
-        public bool Status { get; private set; }
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public int PointsRequired { get; set; }
+        public bool Status { get; set; }
+        public RewardType Type { get; set; }
 
-        public ICollection<WorkerReward> WorkerRewards { get; private set; }
+
+        public ICollection<WorkerReward> WorkerRewards { get; set; }
     }
-
 }

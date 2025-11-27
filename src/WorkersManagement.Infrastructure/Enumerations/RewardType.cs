@@ -2,6 +2,8 @@
 {
     public enum RewardType
     {
-        GiftVoucher
+        GiftVoucher,
+        ExtraVacationDay,
+        PublicRecognition,
     }
 }

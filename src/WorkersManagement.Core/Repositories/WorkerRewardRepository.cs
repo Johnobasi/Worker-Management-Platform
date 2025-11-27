@@ -77,13 +77,35 @@ namespace WorkersManagement.Core.Repositories
 
                 if (!qualifiesForReward) return;
 
+                var rewardEntity = await _context.Rewards
+                        .FirstOrDefaultAsync(r => r.Type == RewardType.GiftVoucher);
+
+                if (rewardEntity == null)
+                {
+                    // 2️⃣ Create the Reward if it does not exist
+                    rewardEntity = new Reward
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = "Monthly Gift Voucher",
+                        Description = "Awarded for outstanding spiritual commitment and participation.",
+                        PointsRequired = 90,
+                        Status = true,
+                        Type = RewardType.GiftVoucher                                           
+                    };
+
+                    _context.Rewards.Add(rewardEntity);
+                    await _context.SaveChangesAsync();
+                }
+
                 var reward = new WorkerReward
                 {
                     Id = Guid.NewGuid(),
                     WorkerId = workerId,
+                    RewardId = rewardEntity.Id,
                     RewardType = RewardType.GiftVoucher,
                     CreatedAt = DateTime.UtcNow,
                     Status = RewardStatus.Pending
+
                 };
 
                 await _context.WorkerRewards.AddAsync(reward);
@@ -204,13 +226,15 @@ namespace WorkersManagement.Core.Repositories
                     .Where(r => r.WorkerId == workerId)
                         .OrderByDescending(r => r.CreatedAt)
                              .ToListAsync();
+
                 var response = new WorkerRewardResponse
                 {
-                    Rewards = rewards,
-                    Message = rewards.Count == 0 ? "The worker has no rewards at this time." : "🎉 Congratulations!\n\n" +                         
-                                                    "You’ve earned a Gift Voucher for your outstanding participation and spiritual commitment this month.\n" +
-                                                    "Thank you for your consistency in services and spiritual habits! \n" +
-                                                    "Please your team pastor for your Gift Voucher!"
+                    Message = rewards.Count == 0
+                        ? "The worker has no rewards at this time."
+                        : $"🎉 Congratulations!\n\n" +
+                          "You’ve earned a Gift Voucher for your outstanding participation and spiritual commitment this month.\n" +
+                          "Thank you for your consistency in services and spiritual habits! \n" +
+                          "Please see your team pastor for your Gift Voucher!"
                 };
 
                 return response;

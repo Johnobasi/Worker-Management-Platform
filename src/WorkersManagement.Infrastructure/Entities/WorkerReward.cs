@@ -4,9 +4,9 @@ namespace WorkersManagement.Infrastructure
 {
     public class WorkerReward
     {
-        public Guid RewardId { get; private set; }
-        public DateTime EarnedAt { get; private set; }
-        public Reward Reward { get; private set; }
+        public Guid RewardId { get; set; }
+        public DateTime EarnedAt { get;  set; }
+        public Reward Reward { get; set; }
         public Guid Id { get; set; }
         public Guid WorkerId { get; set; }
         public RewardType RewardType { get; set; }
