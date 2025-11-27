@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Reflection.Emit;
 
 namespace WorkersManagement.Infrastructure.Configurations
 {
@@ -22,6 +23,14 @@ namespace WorkersManagement.Infrastructure.Configurations
             builder.HasOne(a => a.Worker)
                 .WithMany(w => w.Attendances)
                 .HasForeignKey(a => a.WorkerId);
+
+            builder
+            .Property(a => a.Status)
+            .HasConversion<string>();
+
+            builder
+                .Property(a => a.Type)
+                .HasConversion<string>();
         }
     }
 }
