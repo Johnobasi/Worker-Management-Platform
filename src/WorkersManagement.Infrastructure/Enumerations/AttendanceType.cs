@@ -4,7 +4,7 @@
     {
         SundayService = 0,
         MidweekService = 1,
-        WorkersMeeting = 4,
+        WorkersMeeting = 3,
         SpecialServiceMeeting = 2
     }
 }
