@@ -70,9 +70,13 @@ namespace WorkersManagement.API.Controllers
                 await _attendanceRepository.SaveAttendance(workerId, checkInTime,attendanceType);
                 return Ok("Attendance saved.");
             }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving manual attendance.");
+                _logger.LogError(ex, "Unexpected error saving manual attendance.");
                 return StatusCode(500, "Internal server error.");
             }
         }

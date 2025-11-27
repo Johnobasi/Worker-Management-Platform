@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Bibliography;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Habits;
@@ -180,6 +179,26 @@ namespace WorkersManagement.Core.Repositories
             }
             try
             {
+
+                // Determine IsEarlyCheckIn based on your cutoff times
+                var sundayCutoff = new TimeSpan(9, 0, 0);         // 9:00 AM
+                var midweekCutoff = new TimeSpan(18, 45, 0);      // 6:45 PM
+
+                bool isEarly = attendanceType switch
+                {
+                    AttendanceType.SundayService =>
+                        checkInTime.DayOfWeek == DayOfWeek.Sunday &&
+                        checkInTime.TimeOfDay <= sundayCutoff,
+
+                    AttendanceType.MidweekService =>
+                        checkInTime.DayOfWeek == DayOfWeek.Wednesday &&
+                        checkInTime.TimeOfDay <= midweekCutoff,
+
+                    AttendanceType.SpecialServiceMeeting => true, // always early for special
+
+                    _ => false
+                };
+
                 var attendance = new Attendance
                 {
                     Id = Guid.NewGuid(),
@@ -188,6 +207,7 @@ namespace WorkersManagement.Core.Repositories
                     Status = AttendanceStatus.Present,
                     Type = attendanceType,
                     CreatedAt = DateTime.UtcNow,
+                    IsEarlyCheckIn = isEarly
                 };
 
                 _context.Attendances.Add(attendance);
@@ -197,7 +217,6 @@ namespace WorkersManagement.Core.Repositories
             {
                 _logger.LogError(ex.Message);
             }
-
         }
 
         private bool IsValidAttendanceTime(AttendanceType type, DateTime checkInTime)

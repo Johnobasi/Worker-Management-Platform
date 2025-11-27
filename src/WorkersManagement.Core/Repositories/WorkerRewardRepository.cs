@@ -23,54 +23,60 @@ namespace WorkersManagement.Core.Repositories
 
             try
             {
+                var now = DateTime.UtcNow;
+
+                var monthStart = new DateTime(now.Year, now.Month, 1);
+                var monthEnd = monthStart.AddMonths(1).AddSeconds(-1);
+
+
                 // 1️⃣ Fetch all attendances in the week
-                var weeklyAttendances = await _context.Attendances
-                    .Where(a => a.WorkerId == workerId)
+                var monthlyAttendances = await _context.Attendances
+                      .Where(a => a.WorkerId == workerId &&
+                        a.CheckInTime >= monthStart &&
+                        a.CheckInTime <= monthEnd)
                     .ToListAsync();
 
                 // 2️⃣ Fetch all spiritual activities in the week
-                var weeklyActivities = await _context.Habits
-                    .Where(a => a.WorkerId == workerId)
+                var monthlyActivities = await _context.Habits
+                     .Where(a => a.WorkerId == workerId &&
+                        a.CompletedAt >= monthStart &&
+                        a.CompletedAt <= monthEnd)
                     .ToListAsync();
 
                 var sundayCutoff = new TimeSpan(9, 0, 0);       // 9:00 AM
                 var midweekCutoff = new TimeSpan(18, 45, 0);    // 6:45 PM
 
-
-                // Sunday early attendance (must be Sunday + before 9:00 AM)
-                var sundayCount = weeklyAttendances.Count(a =>
+                var sundayCount = monthlyAttendances.Count(a =>
                     a.Type == AttendanceType.SundayService &&
                     a.CheckInTime.DayOfWeek == DayOfWeek.Sunday &&
-                    a.CheckInTime.TimeOfDay <= sundayCutoff
-                );
+                    a.CheckInTime.TimeOfDay <= sundayCutoff);
 
-                // Midweek early attendance (must be Wednesday + before 6:45 PM)
-                var midweekCount = weeklyAttendances.Count(a =>
+                var midweekCount = monthlyAttendances.Count(a =>
                     a.Type == AttendanceType.MidweekService &&
                     a.CheckInTime.DayOfWeek == DayOfWeek.Wednesday &&
-                    a.CheckInTime.TimeOfDay <= midweekCutoff
-                );
-                var specialEvents = weeklyAttendances.Count(a => a.Type == AttendanceType.SpecialServiceMeeting);
+                    a.CheckInTime.TimeOfDay <= midweekCutoff);
+
+                var specialEvents = monthlyAttendances.Count(a =>
+                    a.Type == AttendanceType.SpecialServiceMeeting);
+
                 var totalAttendance = sundayCount + midweekCount + specialEvents;
 
-                // 4️⃣ Count activities
-                var nlpCount = weeklyActivities.Count(a => a.Type == HabitType.NLPPrayer);
-                var bibleCount = weeklyActivities.Count(a => a.Type == HabitType.BibleStudy);
-                var devotionalCount = weeklyActivities.Count(a => a.Type == HabitType.Devotionals);
-                var fastingCount = weeklyActivities.Count(a => a.Type == HabitType.Fasting);
-                var givingCount = weeklyActivities.Count(a => a.Type == HabitType.Giving);
+                var nlpCount = monthlyActivities.Count(a => a.Type == HabitType.NLPPrayer);
+                var bibleCount = monthlyActivities.Count(a => a.Type == HabitType.BibleStudy);
+                var devotionalCount = monthlyActivities.Count(a => a.Type == HabitType.Devotionals);
+                var fastingCount = monthlyActivities.Count(a => a.Type == HabitType.Fasting);
+                var givingCount = monthlyActivities.Count(a => a.Type == HabitType.Giving);
 
-                // 5️⃣ Determine eligibility
-                var qualifiesForReward = totalAttendance >= 4
-                    && nlpCount >= 5
-                    && bibleCount >= 5
-                    && devotionalCount >= 5
-                    && fastingCount >= 2
-                    && givingCount >= 4; // 4–5 Sundays giving
+                var qualifiesForReward =
+                     totalAttendance >= 4 &&
+                     nlpCount >= 20 &&         // 5/week × 4 weeks (adjust as needed)
+                     bibleCount >= 20 &&
+                     devotionalCount >= 20 &&
+                     fastingCount >= 8 &&      // 2/week × 4 weeks
+                     givingCount >= 4;         // weekly giving (4 Sundays)
 
                 if (!qualifiesForReward) return;
 
-                // 6️⃣ Create reward
                 var reward = new WorkerReward
                 {
                     Id = Guid.NewGuid(),
@@ -83,22 +89,18 @@ namespace WorkersManagement.Core.Repositories
                 await _context.WorkerRewards.AddAsync(reward);
                 await _context.SaveChangesAsync();
 
-                // 7️⃣ Notify worker
-                await NotifyWorker(workerId, weeklyAttendances, weeklyActivities);
+                await NotifyWorker(workerId, monthlyAttendances, monthlyActivities);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex.Message);
-            }
-
-            
+            }           
         }
 
         public async Task ProcessAllRewardsAsync()
         {
             try
             {
-                // Fetch all active workers
                 var allWorkers = await _context.Workers
                     .AsNoTracking()
                     .Select(w => w.Id)
