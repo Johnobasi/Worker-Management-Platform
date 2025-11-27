@@ -40,6 +40,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Templates\MonthlyTopWorkerRewardTemplate.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Templates\PasswordResetNewWorkerTemplate.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

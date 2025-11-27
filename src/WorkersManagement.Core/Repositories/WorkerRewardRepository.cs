@@ -139,39 +139,18 @@ namespace WorkersManagement.Core.Repositories
             }
         }
 
-        public async Task NotifyWorker(Guid workerId, List<Attendance> weeklyAttendances, List<Habit> weeklyActivities)
+        public async Task NotifyWorker(Guid workerId, List<Attendance> monthlyAttendances, List<Habit> monthlyActivities)
         {
             try
             {
                 var worker = await _user.GetWorkerByIdAsync(workerId);
 
                 var emailSubject = "Congratulations! You've Earned a Gift Voucher";
-                var emailBody = $@"
-                Dear {worker.FirstName},
-            
-                Congratulations! 🌟
 
-                This month, you have recorded the highest spiritual habits among your peers. 
-                
-                Here’s a summary of your activities:
-
-                - Early Sunday Attendance: {weeklyAttendances.Count(a => a.Type == AttendanceType.SundayService)} days
-                - Midweek Service Attendance: {weeklyAttendances.Count(a => a.Type == AttendanceType.MidweekService)} days
-                - NLP Prayer: {weeklyActivities.Count(a => a.Type == HabitType.NLPPrayer)} times
-                - Bible Reading: {weeklyActivities.Count(a => a.Type == HabitType.BibleStudy)} times
-                - Devotional: {weeklyActivities.Count(a => a.Type == HabitType.Devotionals)} days
-                - Fasting: {weeklyActivities.Count(a => a.Type == HabitType.Fasting)} days
-                - Giving: {weeklyActivities.Count(a => a.Type == HabitType.Giving)} Sundays
-
-                As a token of our appreciation for your dedication and faithfulness, you have earned a gift voucher. 
-
-                Please collect your gift voucher from the church office at your convenience.
-
-                Thank you for your commitment and inspiring example!
-            
-                Best regards,
-                Church Management Team
-                ";
+                var emailBody = await LoadMonthlyTopWorkerRewardTemplateAsync(
+                worker,
+                monthlyAttendances,
+                monthlyActivities);
 
                 await _emailService.SendEmailAsync(worker.Email, emailSubject, emailBody);
 
@@ -181,6 +160,54 @@ namespace WorkersManagement.Core.Repositories
                 _logger.LogError(ex.Message);
             }
             
+        }
+
+        private async Task<string> LoadMonthlyTopWorkerRewardTemplateAsync(
+            Worker worker,
+            IReadOnlyCollection<Attendance> weeklyAttendances,
+            IReadOnlyCollection<Habit> weeklyActivities)
+        {
+            try
+            {
+                string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                string templatePath = Path.Combine(baseDirectory, "Templates", "MonthlyTopWorkerRewardTemplate.html");
+
+                if (!File.Exists(templatePath))
+                {
+                    _logger.LogError("Reward email template not found at {Path}", templatePath);
+                    throw new FileNotFoundException("Reward email template file not found", templatePath);
+                }
+
+                string template = await File.ReadAllTextAsync(templatePath);
+
+                // Calculate counts once
+                var sundayCount = weeklyAttendances.Count(a => a.Type == AttendanceType.SundayService);
+                var midweekCount = weeklyAttendances.Count(a => a.Type == AttendanceType.MidweekService);
+                var nlpPrayerCount = weeklyActivities.Count(a => a.Type == HabitType.NLPPrayer);
+                var bibleStudyCount = weeklyActivities.Count(a => a.Type == HabitType.BibleStudy);
+                var devotionalCount = weeklyActivities.Count(a => a.Type == HabitType.Devotionals);
+                var fastingCount = weeklyActivities.Count(a => a.Type == HabitType.Fasting);
+                var givingCount = weeklyActivities.Count(a => a.Type == HabitType.Giving);
+
+                // Replace all placeholders
+                template = template
+                    .Replace("{FirstName}", worker.FirstName ?? "")
+                    .Replace("{SundayCount}", sundayCount.ToString())
+                    .Replace("{MidweekCount}", midweekCount.ToString())
+                    .Replace("{NLPPrayerCount}", nlpPrayerCount.ToString())
+                    .Replace("{BibleStudyCount}", bibleStudyCount.ToString())
+                    .Replace("{DevotionalCount}", devotionalCount.ToString())
+                    .Replace("{FastingCount}", fastingCount.ToString())
+                    .Replace("{GivingCount}", givingCount.ToString());
+
+                return template;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load or populate MonthlyTopWorkerRewardTemplate for worker {WorkerId} - {Email}",
+                    worker.Id, worker.Email);
+                throw;
+            }
         }
 
 
