@@ -2,9 +2,9 @@
 {
     public enum AttendanceType
     {
-        SundayService,
-        MidweekService,
-        WorkersMeeting,
-        SpecialServiceMeeting
+        SundayService = 0,
+        MidweekService = 1,
+        WorkersMeeting = 4,
+        SpecialServiceMeeting = 2
     }
 }
