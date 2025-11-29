@@ -210,5 +210,51 @@ namespace WorkersManagement.API.Controllers
                 return StatusCode(500, "An error occurred while deleting the devotional.");
             }
         }
+
+        /// <summary>
+        /// Preview devotional file in browser
+        /// </summary>
+        /// <param name="id">Devotional identifier</param>
+        /// <returns>Inline devotional preview</returns>
+        [HttpGet("preview/{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PreviewDevotional(Guid id)
+        {
+            try
+            {
+                var devotional = await _devotionalService.GetDevotionalByIdAsync(id);
+                if (devotional == null)
+                    return NotFound("Devotional not found.");
+
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), devotional.FilePath);
+                if (!System.IO.File.Exists(fullPath))
+                    return NotFound("Devotional file is missing.");
+
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+                var fileName = Path.GetFileName(fullPath);
+                var fileExtension = Path.GetExtension(fileName).ToLower();
+
+                // Detect MIME type
+                var mimeType = fileExtension switch
+                {
+                    ".pdf" => "application/pdf",
+                    ".jpg" => "image/jpeg",
+                    ".jpeg" => "image/jpeg",
+                    ".png" => "image/png",
+                    ".txt" => "text/plain",
+                    _ => "application/octet-stream"
+                };
+
+                // Inline preview instead of download
+                Response.Headers.Append("Content-Disposition", $"inline; filename={fileName}");
+
+                return File(fileBytes, mimeType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while previewing devotional with ID {DevotionalId}", id);
+                return StatusCode(500, "An error occurred while previewing the devotional.");
+            }
+        }
     }
 }
