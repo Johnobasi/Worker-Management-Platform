@@ -1,9 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http.Headers;
 using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
+using WorkersManagement.Infrastructure;
 using WorkersManagement.Infrastructure.Entities;
+using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
 {
@@ -105,10 +108,11 @@ namespace WorkersManagement.API.Controllers
 
                     try
                     {
+                        var emailBody = await LoadMonthlyDevotionalsAsync(user);
                         await _emailService.SendEmailAsync(
                             email,
                             "New Monthly Devotional Available",
-                            "A new monthly devotional has been uploaded. Please check your dashboard to download it."
+                            emailBody
                         );
 
                         _logger.LogInformation("Email sent successfully to {Email}", email);
@@ -230,26 +234,25 @@ namespace WorkersManagement.API.Controllers
                 if (!System.IO.File.Exists(fullPath))
                     return NotFound("Devotional file is missing.");
 
-                // file bytes
-                var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
                 var fileName = Path.GetFileName(fullPath);
-                var fileExtension = Path.GetExtension(fileName).ToLower();
+                var fileExtension = Path.GetExtension(fileName).ToLowerInvariant();
 
-                // Detect MIME type
-                var mimeType = fileExtension switch
+                // Get MIME type with more comprehensive mapping
+                var mimeType = GetMimeType(fileExtension);
+
+                // Read file bytes
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
+
+                // Set content disposition for inline preview
+                var contentDisposition = new ContentDispositionHeaderValue("inline")
                 {
-                    ".pdf" => "application/pdf",
-                    ".jpg" => "image/jpeg",
-                    ".jpeg" => "image/jpeg",
-                    ".png" => "image/png",
-                    ".txt" => "text/plain",
-                    ".doc" => "application/msword",
-                    ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    _ => "application/octet-stream"
+                    FileName = Uri.EscapeDataString(fileName) // URL encode filename for safety
                 };
+                Response.Headers.ContentDisposition = contentDisposition.ToString();
 
-                // Inline preview instead of download
-                Response.Headers.Add("Content-Disposition", $"inline; filename={fileName}");
+                // Add security headers
+                Response.Headers.CacheControl = "private, max-age=300"; // Cache for 5 minutes
+                Response.Headers.XContentTypeOptions = "nosniff";
 
                 return File(fileBytes, mimeType);
             }
@@ -257,6 +260,73 @@ namespace WorkersManagement.API.Controllers
             {
                 _logger.LogError(ex, "Error occurred while previewing devotional with ID {DevotionalId}", id);
                 return StatusCode(500, "An error occurred while previewing the devotional.");
+            }
+        }
+        private static string GetMimeType(string fileExtension)
+        {
+            return fileExtension switch
+            {
+                // Documents
+                ".pdf" => "application/pdf",
+                ".txt" => "text/plain",
+                ".doc" => "application/msword",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xls" => "application/vnd.ms-excel",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".ppt" => "application/vnd.ms-powerpoint",
+                ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+
+                // Images
+                ".jpg" => "image/jpeg",
+                ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".bmp" => "image/bmp",
+                ".webp" => "image/webp",
+                ".svg" => "image/svg+xml",
+                ".ico" => "image/x-icon",
+
+                // Audio
+                ".mp3" => "audio/mpeg",
+                ".wav" => "audio/wav",
+                ".ogg" => "audio/ogg",
+
+                // Video
+                ".mp4" => "video/mp4",
+                ".webm" => "video/webm",
+                ".avi" => "video/x-msvideo",
+
+                _ => "application/octet-stream" // Default for unknown types
+            };
+        }
+
+        private async Task<string> LoadMonthlyDevotionalsAsync(
+           Worker worker)
+        {
+            try
+            {
+                string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+                string templatePath = Path.Combine(baseDirectory, "Templates", "MonthlyDevotional.html");
+
+                if (!System.IO.File.Exists(templatePath)) 
+                {
+                    _logger.LogError("Monthly Devotional not found at {Path}", templatePath);
+                    throw new FileNotFoundException("Monthly Devotional file not found", templatePath);
+                }
+
+                string template = await System.IO.File.ReadAllTextAsync(templatePath);
+                
+                // Inject template placeholders
+                template = template
+               .Replace("{FirstName}", worker.FirstName ?? "");
+
+                return template;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load or populate MonthlyDevotional for worker {WorkerId} - {Email}",
+                    worker.Id, worker.Email);
+                throw;
             }
         }
     }
