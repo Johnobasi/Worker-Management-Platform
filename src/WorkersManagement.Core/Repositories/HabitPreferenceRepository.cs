@@ -77,16 +77,20 @@ namespace WorkersManagement.Core.Repositories
                 Habits = new List<HabitDashboardItem>()
             };
 
+            var habitSummary = GetHabitSummary(logs);
             foreach (var pref in worker.HabitPreferences)
             {
+              
                 var habitLogs = logs.Where(l => l.Type == pref.HabitType).ToList();
                 var monthlyLogs = habitLogs.Where(l => l.CompletedAt >= startOfMonth).ToList();
 
+                decimal monthlyAmount = monthlyLogs.Sum(x => x.Amount ?? 0);
+                decimal allTimeAmount = habitSummary.ContainsKey(pref.HabitType)
+                    ? habitSummary[pref.HabitType].TotalAmount
+                    : 0;
+
                 int monthlyCount = monthlyLogs.Count;
                 int allTimeCount = habitLogs.Count;
-
-                decimal monthlyAmount = monthlyLogs.Sum(x => x.Amount ?? 0);
-                decimal allTimeAmount = habitLogs.Sum(x => x.Amount ?? 0);
 
                 int streak = CalculateStreak(habitLogs, pref.HabitType);
 
@@ -147,6 +151,18 @@ namespace WorkersManagement.Core.Repositories
             return result;
         }
 
+        private Dictionary<HabitType, (int Count, decimal TotalAmount)> GetHabitSummary(List<Habit> habits)
+        {
+            return habits
+                .GroupBy(h => h.Type)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (
+                        Count: g.Count(),
+                        TotalAmount: g.Sum(h => h.Amount ?? 0)
+                    )
+                );
+        }
         public async Task UpdateHabitPreferencesAsync(Guid workerId, UpdateHabitPreferencesRequest request)
         {
             // 1. Validate worker exists

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Entities;
 using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.API.Controllers
@@ -48,34 +49,26 @@ namespace WorkersManagement.API.Controllers
                 var today = DateTime.UtcNow.Date;
                 // Fetch all habits for the worker
                 var allHabits = await _habitRepository.GetHabitsByWorkerAsync(workerId);
+                var habitSummary = GetHabitSummary(allHabits);
 
-                // Group by type
-                var habitGroups = allHabits.GroupBy(h => h.Type)
-                                           .ToDictionary(g => g.Key, g => g.ToList());
-
-                var habitSummary = habitGroups.ToDictionary(
-                    g => g.Key.ToString(),
-                    g => new
-                    {
-                        HabitCount = g.Value.Count, // total habits of this type
-                        TodayCount = g.Value.Count(h => h.CompletedAt.Date == today), // completed today
-                        TotalCount = g.Value.Count, // all completed habits (all rows in table)
-                        TotalAmount = g.Key == HabitType.Giving
-                            ? "£" + g.Value.Sum(h => h.Amount ?? 0).ToString("N2") // formatted with 2 decimals
-                            : "£0.00"
-                    }
-                );
+                var habitSummaryDto = habitSummary.ToDictionary(
+                        h => h.Key.ToString(),
+                        h => new
+                        {
+                            TotalCount = h.Value.Count,
+                            TotalAmount = "£" + h.Value.TotalAmount.ToString("N2"),
+                            TodayCount = allHabits.Count(x => x.Type == h.Key && x.CompletedAt.Date == today)
+                        }
+                    );
 
                 // Special: Handle Giving types
                 var givingDetails = new List<object>();
-                if (habitGroups.TryGetValue(HabitType.Giving, out var givingHabits))
+                if (habitSummary.ContainsKey(HabitType.Giving))
                 {
-                    var totalGiving = givingHabits.Sum(h => h.Amount ?? 0);
-
-                    // Group by giving type
+                    var givingHabits = allHabits.Where(h => h.Type == HabitType.Giving).ToList();
                     var givingByType = givingHabits
                         .Where(h => h.GivingType.HasValue)
-                        .GroupBy(h => h.GivingType.Value)
+                        .GroupBy(h => h.GivingType!.Value)
                         .ToDictionary(g => g.Key, g => g.Sum(h => h.Amount ?? 0));
 
                     foreach (var kvp in givingByType)
@@ -83,15 +76,14 @@ namespace WorkersManagement.API.Controllers
                         givingDetails.Add(new
                         {
                             Type = kvp.Key.ToString(),
-                            Message = $"Hi {kvp.Key}, your total {kvp.Key} payment is £{kvp.Value:N2}"
+                            Amount = "£" + kvp.Value.ToString("N2")
                         });
                     }
 
-                    // Add total giving
                     givingDetails.Add(new
                     {
                         Type = "Total Giving",
-                        Message = $"Your total giving across all types is £{totalGiving:N2}"
+                        Amount = "£" + givingByType.Values.Sum().ToString("N2")
                     });
                 }
                 // Worker info
@@ -115,7 +107,7 @@ namespace WorkersManagement.API.Controllers
                     },
                     Attendance = attendances.SummaryMessages.Count(),
                     Reward = workerReward,
-                    HabitSummary = habitSummary
+                    HabitSummary = habitSummaryDto
                 };
 
                 return Ok(dashboard);
@@ -125,6 +117,19 @@ namespace WorkersManagement.API.Controllers
                 _logger.LogError(ex, "Error occurred while retrieving dashboard.");
                 return StatusCode(500, "An error occurred while retrieving the dashboard.");
             }
+        }
+
+        private Dictionary<HabitType, (int Count, decimal TotalAmount)> GetHabitSummary(List<Habit> habits)
+        {
+            return habits
+                .GroupBy(h => h.Type)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (
+                        Count: g.Count(),
+                        TotalAmount: g.Sum(h => h.Amount ?? 0)
+                    )
+                );
         }
 
         /// <summary>

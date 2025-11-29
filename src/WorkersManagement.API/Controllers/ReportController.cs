@@ -1,9 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Office2013.Drawing.ChartStyle;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Text;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Entities;
 
 namespace WorkersManagement.API.Controllers
 {
@@ -18,12 +22,18 @@ namespace WorkersManagement.API.Controllers
         private readonly IHabitRepository _habitRepository;
         private readonly IAttendanceRepository _attendanceRepository;
         private readonly ILogger<ReportController> _logger;
-        public ReportController(IHabitRepository habitRepository, IAttendanceRepository attendanceRepository, ILogger<ReportController> logger)
+        private readonly WorkerDbContext _context;
+        public ReportController(IHabitRepository habitRepository, IAttendanceRepository attendanceRepository,
+            ILogger<ReportController> logger, WorkerDbContext workerDbContext)
         {
             _attendanceRepository = attendanceRepository;
             _habitRepository = habitRepository;
             _logger = logger;
+            _context = workerDbContext;
         }
+
+
+
 
         /// <summary>
         /// Download worker activity summary as CSV
@@ -37,15 +47,33 @@ namespace WorkersManagement.API.Controllers
             [FromQuery] string? departmentName = null,
             [FromQuery] List<Guid>? selectedWorkerIds = null)
         {
-
             try
             {
-                var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(
-                startDate, endDate);
+                // Get ALL workers first
+                var workersQuery = _context.Workers
+                    .Include(w => w.Department)
+                    .ThenInclude(d => d.Teams)
+                    .AsQueryable();
 
-                attendanceData = ApplyFilters(attendanceData, teamName, departmentName, selectedWorkerIds);
+                // Apply filters to workers query
+                if (!string.IsNullOrWhiteSpace(departmentName))
+                    workersQuery = workersQuery.Where(w =>
+                        w.Department.Name != null &&
+                        w.Department.Name.ToLower().Contains(departmentName.ToLower()));
 
-                var workerIds = attendanceData.Select(a => a.WorkerId).Distinct().ToList();
+                if (!string.IsNullOrWhiteSpace(teamName))
+                    workersQuery = workersQuery.Where(w =>
+                        w.Department.Teams.Name != null &&
+                        w.Department.Teams.Name.ToLower().Contains(teamName.ToLower()));
+
+                if (selectedWorkerIds != null && selectedWorkerIds.Any())
+                    workersQuery = workersQuery.Where(w => selectedWorkerIds.Contains(w.Id));
+
+                var allFilteredWorkers = await workersQuery.ToListAsync();
+                var workerIds = allFilteredWorkers.Select(w => w.Id).ToList();
+
+                // Get attendance and habits for ALL workers
+                var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate, endDate);
                 var habitsData = await _habitRepository.GetHabitsByWorkerIdAsync(workerIds);
 
                 if (startDate.HasValue && endDate.HasValue)
@@ -54,31 +82,44 @@ namespace WorkersManagement.API.Controllers
                         .Where(h => h.CompletedAt >= startDate && h.CompletedAt <= endDate)
                         .ToList();
                 }
+                // Group data for efficient lookups
+                var attendanceByWorker = attendanceData
+                    .Where(a => workerIds.Contains(a.WorkerId))
+                    .GroupBy(a => a.WorkerId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
 
-                var summaries = attendanceData
-                    .GroupBy(a => a.Worker)
-                    .Select(g =>
+                var habitsByWorker = habitsData
+                    .GroupBy(h => h.WorkerId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+
+
+                attendanceData = ApplyFilters(attendanceData, teamName, departmentName, selectedWorkerIds);
+
+                var summaries = allFilteredWorkers.Select(worker =>
+                {
+                    var workerAttendances = attendanceData.Where(a => a.WorkerId == worker.Id).ToList();
+                    var workerHabits = habitsData.Where(h => h.WorkerId == worker.Id).ToList();
+                    int total = workerAttendances.Count;
+                    return new
                     {
-                        var worker = g.Key;
-                        var habitCount = habitsData.Count(h => h.WorkerId == worker.Id);
-
-                        return new
-                        {
-                            WorkerNumber = worker.WorkerNumber,
-                            Name = $"{worker.FirstName} {worker.LastName}",
-                            Email = worker.Email,
-                            Department = worker.DepartmentName,
-                            Team = worker.TeamName,
-                            AttendanceCount = g.Count(),
-                            PresentCount = g.Count(a => a.Status == "Present"),
-                            AbsentCount = g.Count(a => a.Status == "Absent"),
-                            LateCount = g.Count(a => a.Status == "Late"),
-                            HabitCount = habitCount,
-                            AttendanceRate = g.Any() ? ((double)g.Count(a => a.Status == "Present") / g.Count() * 100).ToString("F2") + "%" : "0%"
-                        };
-                    })
-                    .OrderBy(s => s.Name)
-                    .ToList();
+                        WorkerNumber = worker.WorkerNumber,
+                        Name = $"{worker.FirstName} {worker.LastName}",
+                        Email = worker.Email,
+                        Department = worker.Department?.Name ?? "N/A",
+                        Team = worker.Department?.Teams?.Name ?? "N/A",
+                        AttendanceCount = workerAttendances.Count,
+                        PresentCount = workerAttendances.Count(a => a.Status == "Present"),
+                        AbsentCount = workerAttendances.Count(a => a.Status == "Absent"),
+                        LateCount = workerAttendances.Count(a => a.Status == "Late"),
+                        HabitCount = workerHabits.Count,
+                        AttendanceRate = workerAttendances.Any()
+                            ? ((double)workerAttendances.Count(a => a.Status == "Present") / workerAttendances.Count * 100).ToString("F2") + "%"
+                            : "0%"
+                    };
+                })
+                .OrderBy(s => s.Name)
+                .ToList();
 
                 var csv = GenerateCsv(summaries, "WORKER ACTIVITY SUMMARY REPORT");
                 var filename = $"worker_activity_summary_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
@@ -87,11 +128,12 @@ namespace WorkersManagement.API.Controllers
             }
             catch (Exception ex)
             {
-               _logger.LogError(ex, "Error generating worker activity summary report");
+                _logger.LogError(ex, "Error generating worker activity summary report");
                 return BadRequest(new { Message = "An error occurred while generating the report." });
             }
-            
+
         }
+            
 
         /// <summary>
         /// Download detailed attendance and habit report
@@ -107,65 +149,71 @@ namespace WorkersManagement.API.Controllers
         {
             try
             {
-                var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(
-                startDate, endDate);
+                // 1. Fetch filtered workers
+                var workersQuery = _context.Workers
+                    .Include(w => w.Department)
+                    .ThenInclude(d => d.Teams)
+                    .AsQueryable();
 
-                attendanceData = ApplyFilters(attendanceData, teamName, departmentName, selectedWorkerIds);
+                if (!string.IsNullOrWhiteSpace(departmentName))
+                    workersQuery = workersQuery.Where(w => w.Department.Name != null &&
+                                                           w.Department.Name.ToLower().Contains(departmentName.ToLower()));
 
-                var workerIds = attendanceData.Select(a => a.WorkerId).Distinct().ToList();
-                var habitsData = await _habitRepository.GetHabitsByWorkerIdAsync(workerIds);
+                if (!string.IsNullOrWhiteSpace(teamName))
+                    workersQuery = workersQuery.Where(w => w.Department.Teams.Name != null &&
+                                                           w.Department.Teams.Name.ToLower().Contains(teamName.ToLower()));
 
-                if (startDate.HasValue && endDate.HasValue)
+                if (selectedWorkerIds != null && selectedWorkerIds.Any())
+                    workersQuery = workersQuery.Where(w => selectedWorkerIds.Contains(w.Id));
+
+                var filteredWorkers = await workersQuery.ToListAsync();
+                var workerIds = filteredWorkers.Select(w => w.Id).ToList();
+
+                // 2. Fetch attendance and habits for filtered workers
+                var attendanceData = (await _attendanceRepository.GetAllAttendancesAsync(startDate, endDate))
+                                     .Where(a => workerIds.Contains(a.WorkerId))
+                                     .ToList();
+
+                var habitsData = (await _habitRepository.GetHabitsByWorkerIdAsync(workerIds))
+                                 .Where(h => !startDate.HasValue || h.CompletedAt >= startDate)
+                                 .Where(h => !endDate.HasValue || h.CompletedAt <= endDate)
+                                 .ToList();
+
+                // 3. Build one summary row per worker
+                var reportData = filteredWorkers.Select(worker =>
                 {
-                    habitsData = habitsData
-                        .Where(h => h.CompletedAt >= startDate && h.CompletedAt <= endDate)
-                        .ToList();
-                }
+                    var workerAttendances = attendanceData.Where(a => a.WorkerId == worker.Id).ToList();
+                    var workerHabits = habitsData.Where(h => h.WorkerId == worker.Id).ToList();
 
-                var detailedData = new List<AttendanceHabitRecordDto>();
-                    foreach(var attendance in attendanceData)
+                    int totalAttendance = workerAttendances.Count;
+                    int presentCount = workerAttendances.Count(a => a.Status == "Present");
+                    int absentCount = workerAttendances.Count(a => a.Status == "Absent");
+                    int lateCount = workerAttendances.Count(a => a.Status == "Late");
+                    int habitCount = workerHabits.Count;
+
+                    var lastAttendance = workerAttendances.Any()
+                        ? workerAttendances.Max(a => a.CreatedAt)
+                        : (DateTime?)null;
+
+                    return new AttendanceHabitRecordDto
                     {
+                        WorkerNumber = worker.WorkerNumber,
+                        WorkerName = $"{worker.FirstName} {worker.LastName}",
+                        Date = lastAttendance?.ToString("yyyy-MM-dd") ?? "",
+                        Type = "Summary",
+                        Status = totalAttendance > 0 ? "Has Records" : "No Records",
+                        Department = worker.Department?.Name ?? "N/A",
+                        Team = worker.Department?.Teams?.Name ?? "N/A",
+                        Details = $"Total Attendance: {totalAttendance}, Present: {presentCount}, Absent: {absentCount}, Late: {lateCount}",
+                        HabitName = $"Total Habits: {habitCount}",
+                        HabitCompletedAt = workerHabits.Any()
+                            ? workerHabits.Max(h => h.CompletedAt).ToString("yyyy-MM-dd HH:mm")
+                            : ""
+                    };
+                }).ToList();
 
-                        // Attendance record
-                        detailedData.Add(new AttendanceHabitRecordDto
-                        {
-                            WorkerNumber = attendance.Worker.WorkerNumber,
-                            WorkerName = $"{attendance.Worker.FirstName} {attendance.Worker.LastName}",
-                            Date = attendance.CreatedAt.ToString("yyyy-MM-dd"),
-                            Type = "Attendance",
-                            Status = attendance.Status,
-                            Department = attendance.Worker.DepartmentName,
-                            Team = attendance.Worker.TeamName,
-                            Details = attendance.Status,
-                            HabitName = "",
-                            HabitCompletedAt = ""
-                        });
-
-                        // Add habit records for the same day
-                        var workerHabits = habitsData
-                            .Where(h => h.WorkerId == attendance.WorkerId &&
-                                       h.CompletedAt.Date == attendance.CreatedAt.Date)
-                            .ToList();
-                        // Habit records for the same day
-                        foreach (var habit in workerHabits)
-                        {
-                            detailedData.Add(new AttendanceHabitRecordDto
-                            {
-                                WorkerNumber = attendance.Worker.WorkerNumber,
-                                WorkerName = $"{attendance.Worker.FirstName} {attendance.Worker.LastName}",
-                                Date = habit.CompletedAt.ToString("yyyy-MM-dd"),
-                                Type = "Spiritual Habit",
-                                Status = "Completed",
-                                Department = attendance.Worker.DepartmentName,
-                                Team = attendance.Worker.TeamName,
-                                Details = habit.Notes ?? string.Empty,
-                                HabitName = habit.Type.ToString(),
-                                HabitCompletedAt = habit.CompletedAt.ToString("yyyy-MM-dd HH:mm")
-                            });
-                        }
-                    }
-
-                var csv = GenerateCsv(detailedData, "DETAILED ATTENDANCE REPORT");
+                // 4. Generate CSV
+                var csv = GenerateCsv(reportData, "DETAILED ATTENDANCE REPORT");
                 var filename = $"detailed_attendance_report_{DateTime.UtcNow:yyyyMMdd_HHmmss}.csv";
 
                 return File(Encoding.UTF8.GetBytes(csv), "text/csv", filename);
@@ -193,60 +241,130 @@ namespace WorkersManagement.API.Controllers
 
             try
             {
-                var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(
-                startDate, endDate);
+                      // Get ALL workers first
+                    var workersQuery = _context.Workers
+                        .Include(w => w.Department)
+                        .ThenInclude(d => d.Teams)
+                        .AsQueryable();
 
-                attendanceData = ApplyFilters(attendanceData, teamName, departmentName, selectedWorkerIds);
+                // Apply filters to workers query
+                if (!string.IsNullOrWhiteSpace(departmentName))
+                    workersQuery = workersQuery.Where(w =>
+                        w.Department.Name != null &&
+                        w.Department.Name.ToLower().Contains(departmentName.ToLower()));
 
-                // Department Summary
-                var departmentSummary = attendanceData
-                    .GroupBy(a => a.Worker.DepartmentName ?? "Unknown")
-                    .Select(g => new
+                if (!string.IsNullOrWhiteSpace(teamName))
+                    workersQuery = workersQuery.Where(w =>
+                        w.Department.Teams.Name != null &&
+                        w.Department.Teams.Name.ToLower().Contains(teamName.ToLower()));
+
+                if (selectedWorkerIds != null && selectedWorkerIds.Any())
+                    workersQuery = workersQuery.Where(w => selectedWorkerIds.Contains(w.Id));
+
+                var allFilteredWorkers = await workersQuery.ToListAsync();
+                var workerIds = allFilteredWorkers.Select(w => w.Id).ToList();
+
+                // Get attendance and habits for ALL workers
+                var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate, endDate);
+                var habitsData = await _habitRepository.GetHabitsByWorkerIdAsync(workerIds);
+
+                if (startDate.HasValue && endDate.HasValue)
+                {
+                    habitsData = habitsData
+                        .Where(h => h.CompletedAt >= startDate && h.CompletedAt <= endDate)
+                        .ToList();
+                }
+
+                // Group data for efficient lookups
+                var attendanceByWorker = attendanceData
+                    .Where(a => workerIds.Contains(a.WorkerId))
+                    .GroupBy(a => a.WorkerId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // Department Summary - Include ALL departments from filtered workers
+                var departmentSummary = allFilteredWorkers
+                    .GroupBy(w => w.Department?.Name ?? "Unknown")
+                    .Select(g =>
                     {
-                        Department = g.Key,
-                        TotalWorkers = g.Select(a => a.WorkerId).Distinct().Count(),
-                        TotalAttendance = g.Count(),
-                        PresentCount = g.Count(a => a.Status == "Present"),
-                        AbsentCount = g.Count(a => a.Status == "Absent"),
-                        AttendanceRate = g.Any() ? ((double)g.Count(a => a.Status == "Present") / g.Count() * 100).ToString("F2") + "%" : "0%"
+                        var departmentWorkers = g.ToList();
+                        var departmentWorkerIds = departmentWorkers.Select(w => w.Id).ToList();
+                        var deptAttendances = attendanceData
+                            .Where(a => departmentWorkerIds.Contains(a.WorkerId))
+                            .ToList();
+
+                        return new
+                        {
+                            Department = g.Key,
+                            TotalWorkers = departmentWorkers.Count,
+                            TotalAttendance = deptAttendances.Count,
+                            PresentCount = deptAttendances.Count(a => a.Status == "Present"),
+                            AbsentCount = deptAttendances.Count(a => a.Status == "Absent"),
+                            AttendanceRate = deptAttendances.Any()
+                                ? ((double)deptAttendances.Count(a => a.Status == "Present") / deptAttendances.Count * 100).ToString("F2") + "%"
+                                : "0%"
+                        };
                     })
                     .OrderBy(d => d.Department)
                     .ToList();
 
-                // Team Summary
-                var teamSummary = attendanceData
-                    .GroupBy(a => a.Worker.TeamName ?? "Unknown")
-                    .Select(g => new
+                // Team Summary - Include ALL teams from filtered workers
+                var teamSummary = allFilteredWorkers
+                    .GroupBy(w => w.Department?.Teams?.Name ?? "Unknown")
+                    .Select(g =>
                     {
-                        Team = g.Key,
-                        Department = g.First().Worker.DepartmentName ?? "Unknown",
-                        TotalWorkers = g.Select(a => a.WorkerId).Distinct().Count(),
-                        TotalAttendance = g.Count(),
-                        PresentCount = g.Count(a => a.Status == "Present"),
-                        AttendanceRate = g.Any() ? ((double)g.Count(a => a.Status == "Present") / g.Count() * 100).ToString("F2") + "%" : "0%"
+                        var teamWorkers = g.ToList();
+                        var teamWorkerIds = teamWorkers.Select(w => w.Id).ToList();
+                        var teamAttendances = attendanceData
+                            .Where(a => teamWorkerIds.Contains(a.WorkerId))
+                            .ToList();
+
+                        return new
+                        {
+                            Team = g.Key,
+                            Department = g.First().Department?.Name ?? "Unknown",
+                            TotalWorkers = teamWorkers.Count,
+                            TotalAttendance = teamAttendances.Count,
+                            PresentCount = teamAttendances.Count(a => a.Status == "Present"),
+                            AttendanceRate = teamAttendances.Any()
+                                ? ((double)teamAttendances.Count(a => a.Status == "Present") / teamAttendances.Count * 100).ToString("F2") + "%"
+                                : "0%"
+                        };
                     })
                     .OrderBy(t => t.Department)
                     .ThenBy(t => t.Team)
                     .ToList();
 
-                // Worker Details
-                var workerDetails = attendanceData
-                    .GroupBy(a => a.Worker)
-                    .Select(g => new
+                // Worker Details - Include ALL workers
+                var workerDetails = allFilteredWorkers.Select(worker =>
+                {
+
+                    var workerAttendances = attendanceData
+                       .Where(a => a.WorkerId == worker.Id)
+                       .ToList();
+
+                    var workerHabits = habitsData
+                        .Where(h => h.WorkerId == worker.Id)
+                        .ToList();
+
+                    return new
                     {
-                        WorkerNumber = g.Key.WorkerNumber,
-                        Name = $"{g.Key.FirstName} {g.Key.LastName}",
-                        Email = g.Key.Email,
-                        Department = g.Key.DepartmentName,
-                        Team = g.Key.TeamName,
-                        TotalAttendance = g.Count(),
-                        PresentCount = g.Count(a => a.Status == "Present"),
-                        AbsentCount = g.Count(a => a.Status == "Absent"),
-                        LateCount = g.Count(a => a.Status == "Late"),
-                        AttendanceRate = g.Any() ? ((double)g.Count(a => a.Status == "Present") / g.Count() * 100).ToString("F2") + "%" : "0%"
-                    })
-                    .OrderBy(w => w.Name)
-                    .ToList();
+                        WorkerNumber = worker.WorkerNumber,
+                        Name = $"{worker.FirstName} {worker.LastName}",
+                        Email = worker.Email,
+                        Department = worker.Department?.Name ?? "N/A",
+                        Team = worker.Department?.Teams?.Name ?? "N/A",
+                        TotalAttendance = workerAttendances.Count,
+                        PresentCount = workerAttendances.Count(a => a.Status == "Present"),
+                        AbsentCount = workerAttendances.Count(a => a.Status == "Absent"),
+                        LateCount = workerAttendances.Count(a => a.Status == "Late"),
+                        HabitCount = workerHabits.Count,
+                        AttendanceRate = workerAttendances.Any()
+                            ? ((double)workerAttendances.Count(a => a.Status == "Present") / workerAttendances.Count * 100).ToString("F2") + "%"
+                            : "0%"
+                    };
+                })
+                .OrderBy(w => w.Name)
+                .ToList();
 
                 var deptCsv = GenerateCsv(departmentSummary, "DEPARTMENT SUMMARY REPORT");
                 var teamCsv = GenerateCsv(teamSummary, "TEAM SUMMARY REPORT");
@@ -285,15 +403,35 @@ namespace WorkersManagement.API.Controllers
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100); // Limit page size to 100 for performance
 
+            // Build workers query
+            var workersQuery = _context.Workers
+                .Include(w => w.Department)
+                .ThenInclude(d => d.Teams)
+                .AsQueryable();
+
+            // Apply filters to workers query
+            if (!string.IsNullOrWhiteSpace(departmentName))
+                workersQuery = workersQuery.Where(w =>
+                    w.Department.Name != null &&
+                    w.Department.Name.ToLower().Contains(departmentName.ToLower()));
+
+            if (!string.IsNullOrWhiteSpace(teamName))
+                workersQuery = workersQuery.Where(w =>
+                    w.Department.Teams.Name != null &&
+                    w.Department.Teams.Name.ToLower().Contains(teamName.ToLower()));
+
+            if (selectedWorkerIds != null && selectedWorkerIds.Any())
+                workersQuery = workersQuery.Where(w => selectedWorkerIds.Contains(w.Id));
+
+            // Get all filtered workers
+            var allFilteredWorkers = await workersQuery.ToListAsync();
+            var workerIds = allFilteredWorkers.Select(w => w.Id).ToList();
+
+            // Fetch attendance and habit data for all filtered workers
             var attendanceData = await _attendanceRepository.GetAllAttendancesAsync(startDate, endDate);
-
-
-            // Apply filters
-            attendanceData = ApplyFilters(attendanceData, teamName, departmentName, selectedWorkerIds);
-
-            var workerIds = attendanceData.Select(a => a.WorkerId).Distinct().ToList();
             var habitsData = await _habitRepository.GetHabitsByWorkerIdAsync(workerIds);
 
+            // Filter habits by date range if provided
             if (startDate.HasValue && endDate.HasValue)
             {
                 habitsData = habitsData
@@ -301,33 +439,45 @@ namespace WorkersManagement.API.Controllers
                     .ToList();
             }
 
-            // Get all workers data for sorting and pagination
-            var allWorkers = attendanceData
-                .GroupBy(a => a.Worker)
-                .Select(g =>
-                {
-                    var worker = g.Key;
-                    var workerHabits = habitsData.Where(h => h.WorkerId == worker.Id).ToList();
+            // Group data for efficient lookups
+            var attendanceByWorker = attendanceData
+                .Where(a => workerIds.Contains(a.WorkerId))
+                .GroupBy(a => a.WorkerId)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-                    return new WorkerDataDto
-                    {
-                        WorkerNumber = worker.WorkerNumber,
-                        FirstName = worker.FirstName,
-                        LastName = worker.LastName,
-                        Email = worker.Email,
-                        Department = worker.DepartmentName,
-                        Team = worker.TeamName,
-                        TotalAttendance = g.Count(),
-                        PresentCount = g.Count(a => a.Status == "Present"),
-                        AbsentCount = g.Count(a => a.Status == "Absent"),
-                        LateCount = g.Count(a => a.Status == "Late"),
-                        HabitCount = workerHabits.Count,
-                        LastAttendance = g.Max(a => a.CreatedAt),
-                        IsSelected = selectedWorkerIds?.Contains(worker.Id) ?? false,
-                        AttendanceRate = g.Any() ? ((double)g.Count(a => a.Status == "Present") / g.Count() * 100) : 0
-                    };
-                })
-                .ToList();
+
+            var habitsByWorker = habitsData
+                .GroupBy(h => h.WorkerId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Build worker data for ALL filtered workers (including those with no attendance)
+            var allWorkers = allFilteredWorkers.Select(worker =>
+            {
+                var workerAttendances = attendanceData.Where(a => a.WorkerId == worker.Id).ToList();
+                var workerHabits = habitsData.Where(h => h.WorkerId == worker.Id).ToList();
+                int total = workerAttendances.Count;
+                return new WorkerDataDto
+                {
+                    WorkerNumber = worker.WorkerNumber,
+                    FirstName = worker.FirstName,
+                    LastName = worker.LastName,
+                    Email = worker.Email,
+                    Department = worker.Department?.Name ?? "N/A",
+                    Team = worker.Department?.Teams?.Name ?? "N/A",
+                    TotalAttendance = total,
+                    PresentCount = workerAttendances.Count(a => a.Status == "Present"),
+                    AbsentCount = workerAttendances.Count(a => a.Status == "Absent"),
+                    LateCount = workerAttendances.Count(a => a.Status == "Late"),
+                    HabitCount = workerHabits.Count,
+                    LastAttendance = workerAttendances.Any()
+                    ? workerAttendances.Max(a => a.CreatedAt)
+                    : DateTime.MinValue,
+                    IsSelected = selectedWorkerIds?.Contains(worker.Id) ?? false,
+                    AttendanceRate = workerAttendances.Any()
+                        ? Math.Round((double)workerAttendances.Count(a => a.Status == "Present") / workerAttendances.Count * 100, 2)
+                        : 0
+                };
+            }).ToList();
 
             // Apply sorting
             var sortedWorkers = ApplySorting(allWorkers, sortBy, sortOrder);
@@ -354,6 +504,8 @@ namespace WorkersManagement.API.Controllers
             };
 
             return Ok(result);
+
+
         }
 
         #region DTOs
@@ -391,7 +543,6 @@ namespace WorkersManagement.API.Controllers
 
         public class WorkerDataDto
         {
-            public Guid WorkerId { get; set; }
             public string WorkerNumber { get; set; } = string.Empty;
             public string FirstName { get; set; } = string.Empty;
             public string LastName { get; set; } = string.Empty;
