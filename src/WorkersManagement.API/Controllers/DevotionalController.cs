@@ -230,6 +230,7 @@ namespace WorkersManagement.API.Controllers
                 if (!System.IO.File.Exists(fullPath))
                     return NotFound("Devotional file is missing.");
 
+                // file bytes
                 var fileBytes = await System.IO.File.ReadAllBytesAsync(fullPath);
                 var fileName = Path.GetFileName(fullPath);
                 var fileExtension = Path.GetExtension(fileName).ToLower();
