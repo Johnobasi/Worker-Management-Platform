@@ -104,7 +104,8 @@ namespace WorkersManagement.Core.Repositories
 
                 return new AttendanceSummaryResponse
                 {
-                    SummaryMessages =  summary 
+                    SummaryMessages =  summary ,
+                    TotalCount = totalCount
                 };
             }
             catch (Exception ex)

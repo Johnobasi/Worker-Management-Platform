@@ -105,7 +105,10 @@ namespace WorkersManagement.API.Controllers
                         worker.Id,
                         Department = worker.Department?.Name
                     },
-                    Attendance = attendances.SummaryMessages.Count(),
+                    Attendance = attendances.TotalCount > 0 ? new
+                    {
+                        attendances.TotalCount,
+                    } : null,
                     Reward = workerReward,
                     HabitSummary = habitSummaryDto
                 };
