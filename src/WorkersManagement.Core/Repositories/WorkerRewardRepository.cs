@@ -259,7 +259,7 @@ namespace WorkersManagement.Core.Repositories
                 {
                     Message = rewards.Count == 0
                         ? "The worker has no rewards at this time."
-                        : $"🏆🎉🎈💐 Congratulations!\n\n" +
+                        : $"🏆🏆🏆 Congratulations! 🎉🎈💐\n\n" +
                         $"You've earned a Gift Voucher this month.\nPlease see your team pastor to receive it."
                 };
 
