@@ -4,6 +4,7 @@ using WorkersManagement.Core.Abstract;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Entities;
 using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Core.Repositories
@@ -258,10 +259,8 @@ namespace WorkersManagement.Core.Repositories
                 {
                     Message = rewards.Count == 0
                         ? "The worker has no rewards at this time."
-                        : $"🎉 Congratulations!\n\n" +
-                          "You’ve earned a Gift Voucher for your outstanding participation and spiritual commitment this month.\n" +
-                          "Thank you for your consistency in services and spiritual habits! \n" +
-                          "Please see your team pastor for your Gift Voucher!"
+                        : $"🏆🎉🎈💐 Congratulations!\n\n" +
+                        $"You've earned a Gift Voucher this month.\nPlease see your team pastor to receive it."
                 };
 
                 return response;

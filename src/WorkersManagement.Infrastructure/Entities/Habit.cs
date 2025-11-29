@@ -1,7 +1,6 @@
-﻿using WorkersManagement.Infrastructure.Entities;
-using WorkersManagement.Infrastructure.Enumerations;
+﻿using WorkersManagement.Infrastructure.Enumerations;
 
-namespace WorkersManagement.Infrastructure
+namespace WorkersManagement.Infrastructure.Entities
 {
     public class Habit
     {

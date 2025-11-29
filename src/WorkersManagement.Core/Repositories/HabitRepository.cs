@@ -4,6 +4,7 @@ using System.Data.Common;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
 using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Entities;
 using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Core.Repositories

@@ -1,6 +1,6 @@
 ﻿using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Habits;
-using WorkersManagement.Infrastructure;
+using WorkersManagement.Infrastructure.Entities;
 using WorkersManagement.Infrastructure.Enumerations;
 
 namespace WorkersManagement.Domain.Interfaces

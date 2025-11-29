@@ -4,7 +4,6 @@ using System.ComponentModel.DataAnnotations;
 using WorkersManagement.Domain.Dtos;
 using WorkersManagement.Domain.Dtos.Habits;
 using WorkersManagement.Domain.Interfaces;
-using WorkersManagement.Infrastructure;
 using WorkersManagement.Infrastructure.Entities;
 using WorkersManagement.Infrastructure.Enumerations;
 

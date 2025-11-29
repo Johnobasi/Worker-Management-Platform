@@ -91,7 +91,6 @@ namespace WorkersManagement.Core.Repositories
                 int streak = CalculateStreak(habitLogs, pref.HabitType);
 
                 string message = BuildMessage(
-                    worker.FirstName,
                     pref.HabitType,
                     monthlyCount,
                     monthlyAmount,
@@ -129,7 +128,7 @@ namespace WorkersManagement.Core.Repositories
                             GivingType = kvp.Key,
                             MonthlyAmount = monthlyLogs.Where(l => l.GivingType == kvp.Key).Sum(l => l.Amount ?? 0),
                             AllTimeAmount = kvp.Value,
-                            Message = $"Hi {worker.FirstName}, your total {kvp.Key} payment is £{kvp.Value:N2}"
+                            Message = $"Your total {kvp.Key} giving is £{kvp.Value:N2}. God bless your generosity."
                         });
                     }
 
@@ -139,7 +138,7 @@ namespace WorkersManagement.Core.Repositories
                         GivingType = null,
                         MonthlyAmount = monthlyLogs.Sum(l => l.Amount ?? 0),
                         AllTimeAmount = totalGiving,
-                        Message = $"Your total giving across all types is £{totalGiving:N2}"
+                        Message = $"Your total giving this month is £{totalGiving:N2}"
                     });
                 }
             }
@@ -222,7 +221,6 @@ namespace WorkersManagement.Core.Repositories
         }
 
         private string BuildMessage(
-            string name,
             HabitType habit,
             int monthlyCount,
             decimal monthlyAmount,
@@ -233,21 +231,21 @@ namespace WorkersManagement.Core.Repositories
             return habit switch
             {
                 HabitType.Giving =>
-                    $"Hi {name}, you have given £{monthlyAmount} this month. All-time giving: £{allTimeAmount}.",
+                    $"Monthly giving: £{monthlyAmount}. All-time giving: £{allTimeAmount}.",
 
                 HabitType.Fasting =>
-                    $"Hi {name}, you fasted {monthlyCount} days this month. Current streak: {streak}. Total: {allTimeCount} days.",
+                    $"You fasted {monthlyCount} days this month. Current streak: {streak}. Total: {allTimeCount} days.",
 
                 HabitType.BibleStudy =>
-                    $"Hi {name}, you studied the Bible {monthlyCount} times this month. Streak: {streak}. Total studies: {allTimeCount}.",
+                    $"You studied the Bible {monthlyCount} times this month. Your strea is {streak} days. Total studies: {allTimeCount}. Keep growing!",
 
                 HabitType.NLPPrayer =>
-                    $"Hi {name}, you prayed {monthlyCount} times this month. Streak: {streak} days. All-time total: {allTimeCount} sessions.",
+                    $"You prayed at NLP {monthlyCount} times this month. Streak: {streak} days. Total sessions joined: {allTimeCount}. Keep burning!",
 
                 HabitType.Devotionals =>
-                    $"Hi {name}, you completed {monthlyCount} devotionals this month. Streak: {streak}. Total: {allTimeCount}.",
+                    $"You've done your devotionals {monthlyCount} times this month. Streak: {streak}. Total: {allTimeCount}. keep presisng in",
 
-                _ => $"Hi {name}, great job staying consistent!"
+                _ => $"Great job staying consistent!"
             };
         }
     }
