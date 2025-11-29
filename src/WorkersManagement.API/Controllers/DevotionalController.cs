@@ -243,11 +243,13 @@ namespace WorkersManagement.API.Controllers
                     ".jpeg" => "image/jpeg",
                     ".png" => "image/png",
                     ".txt" => "text/plain",
+                    ".doc" => "application/msword",
+                    ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     _ => "application/octet-stream"
                 };
 
                 // Inline preview instead of download
-                Response.Headers.Append("Content-Disposition", $"inline; filename={fileName}");
+                Response.Headers.Add("Content-Disposition", $"inline; filename={fileName}");
 
                 return File(fileBytes, mimeType);
             }
