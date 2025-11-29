@@ -234,10 +234,10 @@ namespace WorkersManagement.Core.Repositories
                     $"Monthly giving: £{monthlyAmount}. All-time giving: £{allTimeAmount}.",
 
                 HabitType.Fasting =>
-                    $"You fasted {monthlyCount} days this month. Current streak: {streak}. Total: {allTimeCount} days.",
+                    $"You fasted {monthlyCount} days this month. streak: {streak}. Total: {allTimeCount} days.",
 
                 HabitType.BibleStudy =>
-                    $"You studied the Bible {monthlyCount} times this month. Your strea is {streak} days. Total studies: {allTimeCount}. Keep growing!",
+                    $"You studied the Bible {monthlyCount} times this month. Your streak is {streak} days. Total studies: {allTimeCount}. Keep growing!",
 
                 HabitType.NLPPrayer =>
                     $"You prayed at NLP {monthlyCount} times this month. Streak: {streak} days. Total sessions joined: {allTimeCount}. Keep burning!",
